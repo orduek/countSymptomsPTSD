@@ -49,6 +49,7 @@ hist(df_clean$Age)
 #### Now we need to binaries the PCL symtpoms to 0 (no symptoms) or more than zero - for each pcl item
 
 ```{r}
+# making sure the count procedure works as expected
 id <- c(1,2,3,4)
 a <-  c("a","b","a","b")
 b <-  c("a","a","a","b")
@@ -67,8 +68,8 @@ for (i in 27:46){
   nam <- paste("A", i, sep = "")
   pcl <- paste("PCL", i-26, sep = "")
   df_clean[pcl] <- dplyr::case_when(df_clean[nam]==0 ~ 'NO', df_clean[nam]>0 ~ 'YES')
-  print(nam)
-  print(pcl)
+  #print(nam)
+  #print(pcl)
 }
 ```
 
@@ -125,4 +126,95 @@ max(countFreq2$freq)
 258 are less than 10 individuals but more than one.
 2473 (32.7%) have same combination, which is the most prevalent in the dataset.
 
+## Now we will do the same procedure on a second (smaller) DSM5 dataset
 
+```{r}
+df_new <- read.spss('/home/or/Documents/va_dsm5_data/psf19pcl.sav', to.data.frame = TRUE)
+df_new$totalPCL <- rowSums(df_new[7:26])
+
+df_newClean <- filter(df_new, !is.na(df_new$totalPCL))
+hist(df_newClean$totalPCL)
+summary(df_newClean$AGE_OCT01)
+```
+### We have 6656 valid observations. 
+- Lets binarize using same method and count combinations
+
+```{r}
+for (i in 1:20){
+  # becuase under 10 its PCLN01 (02,03) need to add zero so run if
+  if (i<10){
+  nam <- paste("PCLN0", i, sep = "")  
+  }
+  else {
+    nam <- paste("PCLN", i, sep = "")
+  }
+  pcl <- paste("PCL", i, sep = "")
+  df_newClean[pcl] <- dplyr::case_when(df_newClean[nam]==0 ~ 'NO', df_newClean[nam]>0 ~ 'YES')
+  
+}
+```
+
+### Create data frame
+
+```{r}
+# create specific dataframe
+dfNew_Binary <- data_frame(df_newClean$ID, df_newClean[63:82])
+countFreq_new <- plyr::count(dfNew_Binary[, -1])
+```
+
+### Only 177 possible combinations. 
+
+```{r}
+## count how many with only one
+sum(countFreq_new$freq==1)
+# count more than one less than ten
+sum(countFreq_new$freq<10) - sum(countFreq_new$freq==1)
+max(countFreq_new$freq)
+6295 / nrow(dfNew_Binary)
+```
+- 94% (6295) are same combination
+
+## something is a bit weird, lets make sure no NAs are hiding there
+```{r}
+table(is.na(df_newClean$PCLN01))
+```
+- Ok, everything is ok. 
+Lets use the second binarized option (2 and more), and see how many combinations we get
+
+```{r}
+df_newClean2 <- df_newClean
+for (i in 1:20){
+  # becuase under 10 its PCLN01 (02,03) need to add zero so run if
+  if (i<10){
+  nam <- paste("PCLN0", i, sep = "")  
+  }
+  else {
+    nam <- paste("PCLN", i, sep = "")
+  }
+  pcl <- paste("PCL", i, sep = "")
+  df_newClean2[pcl] <- dplyr::case_when(df_newClean2[nam]<=1 ~ 'NO', df_newClean2[nam]>=2 ~ 'YES')
+  
+}
+```
+
+```{r}
+# create specific dataframe
+dfNew_Binary2 <- data_frame(df_newClean2$ID, df_newClean2[63:82])
+countFreq_new2 <- plyr::count(dfNew_Binary2[, -1])
+```
+
+### Total of 1153 combinations. Lets look into them more carefully
+
+```{r}
+## count how many with only one
+sum(countFreq_new2$freq==1)
+# count more than one less than ten
+sum(countFreq_new2$freq<10) - sum(countFreq_new2$freq==1)
+max(countFreq_new2$freq)
+2858 / nrow(dfNew_Binary2)
+```
+
+### Some data on the combinations
+- 904 of the 1153 have only one individual. 
+- 208 have more than one but less than 10 individuals
+- 2858 individuals are in the most prevalent combination (43%)
