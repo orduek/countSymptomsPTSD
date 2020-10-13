@@ -1,0 +1,128 @@
+---
+title: "Really 600k ways of PTSD"
+author: "Or Duek & Tobias Spiller"
+output: html_notebook
+---
+
+## This work intends to adress https://journals.sagepub.com/doi/10.1177/1745691613504115
+
+- We will take a look at the DSM-5 data sets we have to see number of combination of symptoms of PTSD in DSM-V. 
+- We could also look at the previous dataset of DSM-IV (150k patients) to see number of combinations there and compare the two
+- Should take a look at somewhat similar work done in depression by Eiko Fried here: https://www.sciencedirect.com/science/article/pii/S0165032714006326?via%3Dihub
+
+
+```{r}
+## load libraries
+require(foreign)
+require(tidyverse)
+require(bootnet)
+require(qgraph)
+library(BGGM)
+library(GGMnonreg)
+require(mgm)
+require(EGAnet)
+require(lavaan)
+require(psychonetrics)
+```
+
+```{r}
+# read dataset
+df <- read.spss('/home/or/Documents/va_dsm5_data/PCL FY15-16.sav', to.data.frame = TRUE)
+```
+
+#### Organise the data a bit
+- Number of NAs
+- Plot histograms of pcl score and age
+
+```{r organize}
+# check nas
+# calculate PCL5 scores A27-A46
+df$totalPCL <- rowSums(df[21:40])
+#hist(df$totalPCL)
+sum(is.na(df$totalPCL))
+
+df_clean <- filter(df, !is.na(df$totalPCL))
+hist(df_clean$totalPCL)
+hist(df_clean$Age)
+```
+
+#### Now we need to binaries the PCL symtpoms to 0 (no symptoms) or more than zero - for each pcl item
+
+```{r}
+id <- c(1,2,3,4)
+a <-  c("a","b","a","b")
+b <-  c("a","a","a","b")
+c <-  c("b","b","b","a")
+
+test <- data.frame(id,a,b,c)
+test$id <- as.factor(test$id)
+# count combinations
+plyr::count(test[, -1])
+```
+### Create dataframe of PCL and id only - but with binary PCL scores
+```{r}
+## PCL is a27 - a46 (PCL-5)
+
+for (i in 27:46){
+  nam <- paste("A", i, sep = "")
+  pcl <- paste("PCL", i-26, sep = "")
+  df_clean[pcl] <- dplyr::case_when(df_clean[nam]==0 ~ 'NO', df_clean[nam]>0 ~ 'YES')
+  print(nam)
+  print(pcl)
+}
+```
+
+#### Now lets count combinations
+```{r}
+# create specific dataframe
+dfBinary <- data_frame(df_clean$IDNUM, df_clean[92:111])
+countFreq <- plyr::count(dfBinary[, -1])
+```
+
+```{r}
+## count how many with only one
+sum(countFreq$freq==1)
+# count more than one less than ten
+sum(countFreq$freq<10) - sum(countFreq$freq==1)
+4702 / nrow(dfBinary)
+```
+
+### Number of combinations
+So, we have a total of 474 combinations observed in this dataset. With 349 combinations have only one individual. 96 combinations had less than 10 individuals (but more than one). One combination had 4702 individuals (62.2%). 
+
+### Let us test with binary of pcl=>2 as yes and else is no (moderate symptoms)
+
+```{r}
+dfClean2 <- df_clean
+for (i in 27:46){
+  nam <- paste("A", i, sep = "")
+  pcl <- paste("PCL", i-26, sep = "")
+  dfClean2[pcl] <- dplyr::case_when(dfClean2[nam]<=1 ~ 'NO', dfClean2[nam]>=2 ~ 'YES')
+ 
+}
+```
+
+### Check combinations
+
+```{r}
+# create specific dataframe
+dfBinary2 <- data_frame(dfClean2$IDNUM, dfClean2[92:111])
+countFreq2 <- plyr::count(dfBinary2[, -1])
+```
+
+### This creates more combinations (1650)
+
+```{r}
+## count how many with only one
+sum(countFreq2$freq==1)
+# count more than one less than ten
+sum(countFreq2$freq<10) - sum(countFreq2$freq==1)
+max(countFreq2$freq)
+2473 / nrow(dfBinary2)
+```
+
+1339 of the combination have only one individual. 
+258 are less than 10 individuals but more than one.
+2473 (32.7%) have same combination, which is the most prevalent in the dataset.
+
+
