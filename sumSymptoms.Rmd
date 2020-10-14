@@ -1,10 +1,13 @@
 ---
 title: "Really 600k ways of PTSD"
 author: "Or Duek & Tobias Spiller"
-output: html_notebook
+output:
+  html_document:
+    df_print: paged
 ---
 
-## This work intends to adress https://journals.sagepub.com/doi/10.1177/1745691613504115
+## This work intends to adress 
+- https://journals.sagepub.com/doi/10.1177/1745691613504115
 
 - We will take a look at the DSM-5 data sets we have to see number of combination of symptoms of PTSD in DSM-V. 
 - We could also look at the previous dataset of DSM-IV (150k patients) to see number of combinations there and compare the two
@@ -218,3 +221,116 @@ max(countFreq_new2$freq)
 - 904 of the 1153 have only one individual. 
 - 208 have more than one but less than 10 individuals
 - 2858 individuals are in the most prevalent combination (43%)
+
+
+### Lets add DSM-IV to the analysis (using data from previous study published in ...)
+
+```{r}
+# load data set
+source('/home/or/Documents/va_data/readData.r')
+```
+
+```{r}
+# all patientes with PTSD and PCLTOT
+pclAll <- dplyr::filter(vaDatclean, !is.na(BPCLTOT))
+# plot pcl total score 
+hist(pclAll$BPCLTOT)
+# we have a minimum of 2 - so we have some NAs - let remove them
+pclAll_Nas <- filter(pclAll, BPCLTOT <=16)
+# total of 20 subjects with 16 or less in PCL (i.e. at least one missing variable)
+# we can remove them from analysis
+pclAll <- filter(pclAll, BPCLTOT >=17)
+# 159577 patients
+#pclNetwork <- pclNoNa # just medicated
+pclNetwork <- pclAll
+nrow(pclNetwork)
+hist(pclNetwork$BPCLTOT)
+```
+
+```{r}
+# take just pcl
+pclItems <- dplyr::select(pclAll, starts_with("PCL"))
+pclItems_noCluster <- dplyr::select(pclItems, -PCLFY, -PCLSURVEYDATE, -PCLRAWSCORE)
+nrow(pclItems_noCluster)
+pclItems_noCluster <- na.omit(pclItems_noCluster)
+nrow(pclItems_noCluster)
+```
+
+Total of 158,139 patients with valid PCL-4 scores (PCL-M)
+Now we can run the analysis similar to before (binarize and count combinations)
+
+```{r}
+dfPCL4 <- pclItems_noCluster
+# using PCL-4 recommended threshold is 3+ (not 2+ as in PCL5)
+for (i in 1:17){
+  nam = paste("PCL", i, sep = "")
+  pcl <- paste("PCLB", i, sep = "")
+  dfPCL4[pcl] <- dplyr::case_when(dfPCL4[nam]<=2 ~ 'NO', dfPCL4[nam]>=3 ~ 'YES')
+  
+}
+```
+
+```{r}
+# create specific dataframe
+id = 1:nrow(dfPCL4)
+dfPCL4_Binary <- data_frame(id, dfPCL4[18:34])
+countFreq_pcl4 <- plyr::count(dfPCL4_Binary[,-1])
+```
+
+### OK - so number of combinations is 25,253 total
+- Lets look at the results a bit
+
+```{r}
+## count how many with only one
+sum(countFreq_pcl4$freq==1)
+# percentage
+sum(countFreq_pcl4$freq==1) / nrow(countFreq_pcl4)
+# count more than one less than ten
+sum(countFreq_pcl4$freq<10) - sum(countFreq_pcl4$freq==1)
+max(countFreq_pcl4$freq)
+max(countFreq_pcl4$freq) / nrow(dfPCL4_Binary)
+```
+
+### Sum results
+- 15,479 combinations are with only 1 individual (59% of combinations)
+- 9368 are less than 10 individuals but more than one
+- 28,901 individuals are present in the most frequent combination of symptoms (18% of patients)
+
+
+### Last thing - lets randomly sample 7k people, to see how it affects the number of combinations
+
+```{r}
+# sample
+#pcl4Sample <- sample(dfPCL4_Binary, size = 7000)
+picked = sample(seq_len(nrow(dfPCL4_Binary)),size = 7000)
+pcl4Sample <- dfPCL4_Binary[picked,]
+countFreq_pcl4Samples <- plyr::count(pcl4Sample[,-1])
+```
+
+### Results of sampling:
+
+Now we have only 2813 combinations. So the size of dataset definetly affects number of possible combinations. BUT - it is also important to state that while DSM-5 has app. 600k combinations, DSM-IV has around 70K and even with a large sample size of 150k patients, we have found a maximum of 28k combinations, which is less than half of possible combinations. 
+
+
+### Last play with data - loop through randomization and print how many combination we get with 7k patients.
+```{r}
+# sample
+#pcl4Sample <- sample(dfPCL4_Binary, size = 7000)
+x <- 1:1000
+for (i in 1:1000){
+  picked = sample(seq_len(nrow(dfPCL4_Binary)),size = 7000)
+  pcl4Sample <- dfPCL4_Binary[picked,]
+  countFreq_pcl4Samples <- plyr::count(pcl4Sample[,-1])
+  x[i] <- nrow(countFreq_pcl4Samples)
+}
+
+MASS::truehist(x)
+```
+### Summary
+- DSM-IV with large dataset (150k) shows a 26,253 combinations
+- DSM-IV with randomly sampled smaller sets (7k) shows around 2800 combinations
+- DSM-V shows 1650 (sample 1) and 1153 (sample 2) combinations
+- Interestingly, DSM-IV shows more actual combination of symptoms, even when accounting for sample size
+
+
+* so - sample size indeed affects the number of actual combinations, but even when accounting for sample size we still see much lower numbers compared to the theoretically possible 600k combinations of DSM-V.
