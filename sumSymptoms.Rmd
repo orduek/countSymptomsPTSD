@@ -64,39 +64,10 @@ test$id <- as.factor(test$id)
 plyr::count(test[, -1])
 ```
 ### Create dataframe of PCL and id only - but with binary PCL scores
+* Let us test with binary of pcl=>2 as yes and else is no (moderate symptoms)
+
 ```{r}
 ## PCL is a27 - a46 (PCL-5)
-
-for (i in 27:46){
-  nam <- paste("A", i, sep = "")
-  pcl <- paste("PCL", i-26, sep = "")
-  df_clean[pcl] <- dplyr::case_when(df_clean[nam]==0 ~ 'NO', df_clean[nam]>0 ~ 'YES')
-  #print(nam)
-  #print(pcl)
-}
-```
-
-#### Now lets count combinations
-```{r}
-# create specific dataframe
-dfBinary <- data_frame(df_clean$IDNUM, df_clean[92:111])
-countFreq <- plyr::count(dfBinary[, -1])
-```
-
-```{r}
-## count how many with only one
-sum(countFreq$freq==1)
-# count more than one less than ten
-sum(countFreq$freq<10) - sum(countFreq$freq==1)
-4702 / nrow(dfBinary)
-```
-
-### Number of combinations
-So, we have a total of 474 combinations observed in this dataset. With 349 combinations have only one individual. 96 combinations had less than 10 individuals (but more than one). One combination had 4702 individuals (62.2%). 
-
-### Let us test with binary of pcl=>2 as yes and else is no (moderate symptoms)
-
-```{r}
 dfClean2 <- df_clean
 for (i in 27:46){
   nam <- paste("A", i, sep = "")
@@ -114,7 +85,7 @@ dfBinary2 <- data_frame(dfClean2$IDNUM, dfClean2[92:111])
 countFreq2 <- plyr::count(dfBinary2[, -1])
 ```
 
-### This creates more combinations (1650)
+### This creates 1650 combinations
 
 ```{r}
 ## count how many with only one
@@ -141,48 +112,6 @@ summary(df_newClean$AGE_OCT01)
 ```
 ### We have 6656 valid observations. 
 - Lets binarize using same method and count combinations
-
-```{r}
-for (i in 1:20){
-  # becuase under 10 its PCLN01 (02,03) need to add zero so run if
-  if (i<10){
-  nam <- paste("PCLN0", i, sep = "")  
-  }
-  else {
-    nam <- paste("PCLN", i, sep = "")
-  }
-  pcl <- paste("PCL", i, sep = "")
-  df_newClean[pcl] <- dplyr::case_when(df_newClean[nam]==0 ~ 'NO', df_newClean[nam]>0 ~ 'YES')
-  
-}
-```
-
-### Create data frame
-
-```{r}
-# create specific dataframe
-dfNew_Binary <- data_frame(df_newClean$ID, df_newClean[63:82])
-countFreq_new <- plyr::count(dfNew_Binary[, -1])
-```
-
-### Only 177 possible combinations. 
-
-```{r}
-## count how many with only one
-sum(countFreq_new$freq==1)
-# count more than one less than ten
-sum(countFreq_new$freq<10) - sum(countFreq_new$freq==1)
-max(countFreq_new$freq)
-6295 / nrow(dfNew_Binary)
-```
-- 94% (6295) are same combination
-
-## something is a bit weird, lets make sure no NAs are hiding there
-```{r}
-table(is.na(df_newClean$PCLN01))
-```
-- Ok, everything is ok. 
-Lets use the second binarized option (2 and more), and see how many combinations we get
 
 ```{r}
 df_newClean2 <- df_newClean
@@ -326,7 +255,9 @@ for (i in 1:1000){
 
 MASS::truehist(x)
 ```
+
 ### Summary
+
 - DSM-IV with large dataset (150k) shows a 26,253 combinations
 - DSM-IV with randomly sampled smaller sets (7k) shows around 2800 combinations
 - DSM-V shows 1650 (sample 1) and 1153 (sample 2) combinations
@@ -334,3 +265,200 @@ MASS::truehist(x)
 
 
 * so - sample size indeed affects the number of actual combinations, but even when accounting for sample size we still see much lower numbers compared to the theoretically possible 600k combinations of DSM-V.
+
+
+## Repeating Glazer's calculation in real life
+
+- Here we will conduct a similar calculation to the one presented in the 600k ways paper.
+- Mainly $\rightarrow$ calculating each cluster according to DSM 4/5
+
+### Starting with DSM-V data
+
+- PCL5:
+* B (Intrusion): Items 1-5
+* C (Avoidance): Items 6-7
+* D () : Items 8-14
+* E () : Items 15-20
+
+#### Start with large dataset:
+
+```{r}
+dfBinary2 <- data_frame(dfClean2$IDNUM, dfClean2[92:111])
+# intrusion
+dfBinary2_int <- dfBinary2[2:6]
+countFreq2_int <- plyr::count(dfBinary2_int) # 31 combinations (like Galazer et al.)
+# avoidance
+dfBinary2_avoid <- dfBinary2[7:8]
+countFreq2_avoid <- plyr::count(dfBinary2_avoid) # 4 combinations (one is no no)
+# mood cog
+dfBinary2_mood <- dfBinary2[9:15]
+countFreq2_mood <- plyr::count(dfBinary2_mood) # 120 combinations 
+
+# hypervigilance
+dfBinary2_hyper <- dfBinary2[16:21]
+countFreq2_hyper <- plyr::count(dfBinary2_hyper) # 61 combinations
+
+31 * 3 * 120 * 61
+
+
+```
+### So here we basically get even more the Galazer anticipated, just because we also have some that marked NO on any symptom of a cluster. 
+
+## Now to Tobias's suggestions:
+1. Power law - plot frequencies
+
+```{r}
+# we have three frequency tables:
+#DSMV big = countFreq2
+#DSMV small = countFreq_new2
+# DSM-IV = countFreq_pcl4
+# DSM-IV random sample = countFreq_pcl4Samples
+
+# order by freq
+# plot
+freq1 <- countFreq2[order(countFreq2$freq, decreasing = TRUE),]
+ggplot(freq1, aes(x=as.factor(1:nrow(freq1)),y=freq)) + geom_bar(stat="identity")
+```
+
+### This is hard to follow, as we have many combinations with only one individual. 
+- lets take the top 50
+
+```{r}
+freq1_top50 <- freq1[1:50,]
+x <- as.factor(1:nrow(freq1_top50))
+ggplot(freq1_top50, aes(x=as.factor(x),y=freq)) + geom_bar(stat="identity") + xlab("Combination Of Symptoms") + theme_minimal()
+  
+```
+
+### Now for the second DSM-V dataset
+
+```{r}
+freq2 <- countFreq_new2[order(countFreq_new2$freq, decreasing = TRUE),]
+freq2_top50 <- freq2[1:50,]
+x <- as.factor(1:nrow(freq2_top50))
+ggplot(freq2_top50, aes(x=as.factor(x),y=freq)) + geom_bar(stat="identity") + xlab("Combination Of Symptoms") + theme_minimal()
+```
+### Now to DSM-IV large dataset
+
+```{r}
+freq3 <- countFreq_pcl4[order(countFreq_pcl4$freq, decreasing = TRUE),]
+freq3_top50 <- freq3[1:50,]
+x <- as.factor(1:nrow(freq3_top50))
+ggplot(freq3_top50, aes(x=as.factor(x),y=freq)) + geom_bar(stat="identity") + xlab("Combination Of Symptoms") + theme_minimal()
+
+```
+
+### Lastly for a randomly samples 7k from the large DSM-IV dataset
+
+```{r}
+freq4 <- countFreq_pcl4Samples[order(countFreq_pcl4Samples$freq, decreasing = TRUE),]
+freq4_top50 <- freq4[1:50,]
+x <- as.factor(1:nrow(freq4_top50))
+ggplot(freq4_top50, aes(x=as.factor(x),y=freq)) + geom_bar(stat="identity") + xlab("Combination Of Symptoms") + theme_minimal()
+```
+### Pareto Q-Q plots
+
+```{r}
+require(ReIns)
+ParetoQQ(data = freq1$freq, main = "DSM-V 1st Sample")
+```
+
+```{r}
+ParetoQQ(data = freq2$freq, main = "DSM-V 2nd Sample")
+```
+```{r}
+ParetoQQ(data = freq3$freq, main = "DSM-IV large Sample")
+```
+```{r}
+ParetoQQ(data = freq4$freq, main = "DSM-IV random 7k Sample")
+```
+
+
+## Next - Tobias offered portfolio of most endorsed profiles. 
+* For now we will just present the first one from each dataset
+
+```{r}
+print(freq1[1,]) # this one endorses all symptoms :(
+print(freq2[1,]) # again - all symptoms
+# DSM-IV large sample
+print(freq3[1,]) # same here - all symptoms
+print(freq4[1,]) # also all symptoms
+```
+
+### Ok this is interesting, but because its all very similar, lets take the second most endorsed profile in each
+
+```{r}
+print(freq1[2,]) # this one endorses all symptoms except PCL 8 (amnesia). Which was expected 
+print(freq2[2,]) # all symptoms, but not endorsing PCL16 (taking too many risks or doing things that can cause harm)
+# DSM-IV large sample
+print(freq3[2,]) # all symptoms but PCL8 (amnesia)
+print(freq4[2,]) # same as abova
+```
+
+
+## OK, last comment was regarding distance between vectors of symptoms
+
+```{r}
+## calculate distance between first and second vector to test the idea
+d <- 20 - sum(freq1[1,1:20]== freq1[2,1:20])
+# now lets for loop across all with first (most prevalent) as reference
+n <- 20 # set number of symptoms
+dist1 = 1:nrow(freq1) # vector for distance
+sympNum1 <- 1:nrow(freq1) # vector for number of endorsed symptoms
+for (i in 1:nrow(freq1)) {
+  d <- n - sum(freq1[1,1:20] == freq1[i,1:20])
+  dist1[i] = d
+  sympNum1[i] <- sum(freq1[i,1:20]=="YES")
+}
+# will plot symptoms and distance 
+plot(dist1, sympNum1)
+```
+
+* We should note that reference for all samples is basically endorsing everything, so we will probably have this straight line anyhow, longer distance = less symptoms.
+
+### Lets run same analysis on the other samples
+
+- DSM-5 2nd sample
+
+```{r}
+## calculate distance between first and second vector to test the idea
+
+# now lets for loop across all with first (most prevalent) as reference
+n <- 20 # set number of symptoms
+dist2 = 1:nrow(freq2) # vector for distance
+sympNum2 <- 1:nrow(freq2) # vector for number of endorsed symptoms
+for (i in 1:nrow(freq2)) {
+  d <- n - sum(freq2[1,1:20] == freq2[i,1:20])
+  dist2[i] = d
+  sympNum2[i] <- sum(freq2[i,1:20]=="YES")
+}
+# will plot symptoms and distance 
+plot(dist2, sympNum2)
+hist(dist2)
+```
+
+### Now DSM-IV
+- Large sample
+```{r}
+n <- 17 # set number of symptoms
+dist3 = 1:nrow(freq3) # vector for distance
+sympNum3 <- 1:nrow(freq3) # vector for number of endorsed symptoms
+for (i in 1:nrow(freq3)) {
+  d <- n - sum(freq3[1,1:17] == freq3[i,1:17])
+  dist3[i] = d
+  sympNum3[i] <- sum(freq3[i,1:17]=="YES")
+  }
+# will plot symptoms and distance 
+plot(dist3, sympNum3)
+hist(dist3)
+```
+
+
+### OK - picture is clear. 
+
+## Summary:
+* We can see much less possible combinations than expected.
+* It seems like frequency of each symptoms' combination is close to compatible with power law
+* The most frequent profile endores (by far) is all symptoms
+* The second most is usually all syptoms but amnesia (with one sample shows all symptoms but risky behaviour)
+
