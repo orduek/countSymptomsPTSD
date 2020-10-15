@@ -26,6 +26,7 @@ require(mgm)
 require(EGAnet)
 require(lavaan)
 require(psychonetrics)
+require(ReIns)
 ```
 
 ```{r}
@@ -330,6 +331,7 @@ ggplot(freq1_top50, aes(x=as.factor(x),y=freq)) + geom_bar(stat="identity") + xl
   
 ```
 
+
 ### Now for the second DSM-V dataset
 
 ```{r}
@@ -338,6 +340,7 @@ freq2_top50 <- freq2[1:50,]
 x <- as.factor(1:nrow(freq2_top50))
 ggplot(freq2_top50, aes(x=as.factor(x),y=freq)) + geom_bar(stat="identity") + xlab("Combination Of Symptoms") + theme_minimal()
 ```
+
 ### Now to DSM-IV large dataset
 
 ```{r}
@@ -356,10 +359,11 @@ freq4_top50 <- freq4[1:50,]
 x <- as.factor(1:nrow(freq4_top50))
 ggplot(freq4_top50, aes(x=as.factor(x),y=freq)) + geom_bar(stat="identity") + xlab("Combination Of Symptoms") + theme_minimal()
 ```
+
 ### Pareto Q-Q plots
 
 ```{r}
-require(ReIns)
+
 ParetoQQ(data = freq1$freq, main = "DSM-V 1st Sample")
 ```
 
@@ -461,4 +465,85 @@ hist(dist3)
 * It seems like frequency of each symptoms' combination is close to compatible with power law
 * The most frequent profile endores (by far) is all symptoms
 * The second most is usually all syptoms but amnesia (with one sample shows all symptoms but risky behaviour)
+
+
+## Adding new PCL5 large dataset (from Ilan)
+
+```{r}
+dfPCL5 <- read.spss('/home/or/Documents/pcl5_vaData/pcl5_100k/PCL5_130K_FY19.sav', to.data.frame = TRUE)
+
+dfPCL5 <- dfPCL5[,5:24]
+dfPCL5 <- na.omit(dfPCL5)
+
+```
+
+### We have 55,609 patients with full PCL5 scores here. Very cool
+
+- Lets run the binarization and combination analyses
+
+```{r}
+dfPCL5_toBinarize <- dfPCL5
+for (i in 1:20){
+  # becuase under 10 its PCLN01 (02,03) need to add zero so run if
+  if (i<10){
+  nam <- paste("PCLN0", i, sep = "")  
+  }
+  else {
+    nam <- paste("PCLN", i, sep = "")
+  }
+  pcl <- paste("PCL", i, sep = "")
+  dfPCL5_toBinarize[pcl] <- dplyr::case_when(dfPCL5_toBinarize[nam]<=1 ~ 'NO', dfPCL5_toBinarize[nam]>=2 ~ 'YES')
+  
+}
+```
+
+```{r}
+# create specific dataframe
+dfbigPCL5_Binary2 <- data_frame(dfPCL5_toBinarize[21:40])
+countFreqBigPCL5 <- plyr::count(dfbigPCL5_Binary2)
+```
+
+
+### A total of 8174 combinations. 
+
+```{r}
+## count how many with only one
+sum(countFreqBigPCL5$freq==1)
+# percentage
+sum(countFreqBigPCL5$freq==1) / nrow(countFreqBigPCL5)
+# count more than one less than ten
+sum(countFreqBigPCL5$freq<10) - sum(countFreqBigPCL5$freq==1)
+max(countFreqBigPCL5$freq)
+max(countFreqBigPCL5$freq) / nrow(dfbigPCL5_Binary2)
+```
+
+* 6479 has only one individual (80%)
+* 1437 between 1-10 individuals
+* The most prevalent has 20,575 individuals in it (39% of total population)
+
+#### Lets run graphs etc.
+
+```{r}
+freq5 <- countFreqBigPCL5[order(countFreqBigPCL5$freq, decreasing = TRUE),]
+freq5_top50 <- freq4[1:50,]
+x <- as.factor(1:nrow(freq5_top50))
+ggplot(freq5_top50, aes(x=as.factor(x),y=freq)) + geom_bar(stat="identity") + xlab("Combination Of Symptoms") + theme_minimal()
+```
+
+Lets to QQ pareto plot
+
+```{r}
+ParetoQQ(data = freq5$freq, main = "DSM-V large Sample")
+```
+
+What is the most frequent (top 2)?
+
+```{r}
+print(freq5[1,]) # Endorsing all symptoms (total of 20,575 people)
+print(freq5[2,]) # All but PCL16 (risky behaviour) - interesting... (total of) 4272 people)
+print(freq5[3,]) # All but amnesia (total of 2453 people)
+```
+
+
+
 
