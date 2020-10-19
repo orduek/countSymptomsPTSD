@@ -623,3 +623,21 @@ freqNonbinar[1,] # most common is still endorsing all symptoms with the highest 
 freqNonbinar[2,] # second most common - endorsing all with 3 instead of 4
 ```
 
+#### Measuring distance in PCL-5 continuous 
+
+```{r}
+## calculate distance between first and second vector to test the idea
+d <- 20 - sum(freqNonbinar[1,1:20]== freqNonbinar[2,1:20])
+# now lets for loop across all with first (most prevalent) as reference
+n <- 20 # set number of symptoms
+dist1 = 1:nrow(freqNonbinar) # vector for distance
+sympNum1 <- 1:nrow(freqNonbinar) # vector for number of endorsed symptoms
+for (i in 1:nrow(freqNonbinar)) {
+  d <- n - sum(freqNonbinar[1,1:20] == freqNonbinar[i,1:20])
+  dist1[i] = d
+  sympNum1[i] <- sum(freqNonbinar[i,1:20]>=2)
+}
+# will plot symptoms and distance 
+plot(sympNum1, dist1)
+```
+
