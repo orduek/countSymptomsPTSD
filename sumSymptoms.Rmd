@@ -14,7 +14,7 @@ output:
 
 
 ## Load library
-```{r eval=FALSE, echo = FALSE}
+```{r echo = FALSE}
 ## load libraries
 require(foreign)
 require(tidyverse)
@@ -22,7 +22,7 @@ require(ReIns)
 require("poweRlaw")
 ```
 
-```{r eval=FALSE, echo = FALSE}
+```{r echo = FALSE}
 # read dataset
 df <- read.spss('/home/or/Documents/va_dsm5_data/PCL FY15-16.sav', to.data.frame = TRUE)
 ```
@@ -37,7 +37,7 @@ df <- read.spss('/home/or/Documents/va_dsm5_data/PCL FY15-16.sav', to.data.frame
 df$totalPCL <- rowSums(df[21:40])
 #hist(df$totalPCL)
 sum(is.na(df$totalPCL))
-
+# 
 df_clean <- filter(df, !is.na(df$totalPCL))
 hist(df_clean$totalPCL)
 hist(df_clean$Age)
@@ -148,7 +148,7 @@ max(countFreq_new2$freq)
 
 ### Lets add DSM-IV to the analysis (using data from previous study published in ...)
 
-```{r eval=FALSE, echo = FALSE}
+```{r echo = FALSE}
 # load data set
 source('/home/or/Documents/va_data/readData.r')
 ```
@@ -200,7 +200,7 @@ dfPCL4_Binary <- data_frame(id, dfPCL4[18:34])
 countFreq_pcl4 <- plyr::count(dfPCL4_Binary[,-1])
 ```
 
-### OK - so number of combinations is 25,253 total
+### OK - so number of combinations is 26,253 total
 - Lets look at the results a bit
 
 ```{r}
@@ -519,7 +519,7 @@ max(countFreqBigPCL5$freq) / nrow(dfbigPCL5_Binary2)
 
 ```{r}
 freq5 <- countFreqBigPCL5[order(countFreqBigPCL5$freq, decreasing = TRUE),]
-freq5_top50 <- freq4[1:50,]
+freq5_top50 <- freq5[1:50,]
 x <- as.factor(1:nrow(freq5_top50))
 ggplot(freq5_top50, aes(x=as.factor(x),y=freq)) + geom_bar(stat="identity") + xlab("Combination Of Symptoms") + theme_minimal()
 ```
@@ -542,20 +542,84 @@ print(freq5[3,]) # All but amnesia (total of 2453 people)
 ## Testing Power Law Distribution
 #### Prepare
 ```{r}
-m_pl = displ$new(countFreqBigPCL5)
-
+m_pl = displ$new(countFreqBigPCL5$freq)
 est = estimate_xmin(m_pl) ## Estiamte parameters
-
 m_pl$setXmin(est) ## Update object
+plot(m_pl)
 ```
 
 #### Test
 ```{r}
-bs_p = bootstrap_p(m_pl)
+bs_p = bootstrap_p(m_pl, no_of_sims = 500, threads = 8)
 ```
 #### p value
 ```{r}
 bs_p$p
+plot(bs_p)
 ```
 
+### It seems like this distribution is fitting the powerlaw distribution. 
+- Lets test the PCL4 data
+
+```{r}
+m_pl4 = displ$new(countFreq_pcl4$freq)
+est4 = estimate_xmin(m_pl4) ## Estiamte parameters
+m_pl4$setXmin(est4) ## Update object
+plot(m_pl4)
+```
+
+```{r}
+bs_p4 = bootstrap_p(m_pl4, no_of_sims = 500, threads = 8)
+bs_p4$p
+plot(bs_p4)
+```
+
+## Lets use PCL not binarized to see how it goes.
+
+```{r}
+countFreqBigPCL5_nonBinar <- plyr::count(dfPCL5)
+```
+
+### Total of 49,168 combinations
+- Lets take some statistics and plot
+
+```{r}
+## count how many with only one
+sum(countFreqBigPCL5_nonBinar$freq==1)
+# percentage
+sum(countFreqBigPCL5_nonBinar$freq==1) / nrow(countFreqBigPCL5_nonBinar)
+# count more than one less than ten
+sum(countFreqBigPCL5_nonBinar$freq<10) - sum(countFreqBigPCL5_nonBinar$freq==1)
+max(countFreqBigPCL5_nonBinar$freq)
+max(countFreqBigPCL5_nonBinar$freq) / nrow(countFreqBigPCL5_nonBinar)
+```
+
+```{r}
+freqNonbinar <- countFreqBigPCL5_nonBinar[order(countFreqBigPCL5_nonBinar$freq, decreasing = TRUE),]
+freqNonbinar_top50 <- freqNonbinar[1:50,]
+x <- as.factor(1:nrow(freqNonbinar_top50))
+ggplot(freqNonbinar_top50, aes(x=as.factor(x),y=freq)) + geom_bar(stat="identity") + xlab("Combination Of Symptoms") + theme_minimal()
+```
+### Lets test power law
+
+```{r}
+m_pl5 = displ$new(countFreqBigPCL5_nonBinar$freq)
+est5 = estimate_xmin(m_pl5) ## Estiamte parameters
+m_pl5$setXmin(est5) ## Update object
+plot(m_pl5)
+```
+
+```{r}
+bs_p5 = bootstrap_p(m_pl5, no_of_sims = 500, threads = 8)
+bs_p5$p
+plot(bs_p5)
+```
+
+### Non binary distribution doesn't follow power law at all
+- Last - lets see most frequent profiles (although it is much less common than in the binary example)
+
+```{r}
+freqNonbinar[1,] # most common is still endorsing all symptoms with the highest possible rate
+freqNonbinar[2,] # second most common - endorsing all with 3 instead of 4
+```
 
