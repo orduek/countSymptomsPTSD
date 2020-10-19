@@ -1,5 +1,5 @@
 ---
-title: "Really 600k ways of PTSD"
+title: "Symptoms of PTSD follow a power law distribution"
 author: "Or Duek & Tobias Spiller"
 output:
   html_document:
@@ -8,28 +8,21 @@ output:
 
 ## This work intends to adress 
 - https://journals.sagepub.com/doi/10.1177/1745691613504115
-
 - We will take a look at the DSM-5 data sets we have to see number of combination of symptoms of PTSD in DSM-V. 
 - We could also look at the previous dataset of DSM-IV (150k patients) to see number of combinations there and compare the two
 - Should take a look at somewhat similar work done in depression by Eiko Fried here: https://www.sciencedirect.com/science/article/pii/S0165032714006326?via%3Dihub
 
 
-```{r}
+## Load library
+```{r eval=FALSE, echo = FALSE}
 ## load libraries
 require(foreign)
 require(tidyverse)
-require(bootnet)
-require(qgraph)
-library(BGGM)
-library(GGMnonreg)
-require(mgm)
-require(EGAnet)
-require(lavaan)
-require(psychonetrics)
 require(ReIns)
+require("poweRlaw")
 ```
 
-```{r}
+```{r eval=FALSE, echo = FALSE}
 # read dataset
 df <- read.spss('/home/or/Documents/va_dsm5_data/PCL FY15-16.sav', to.data.frame = TRUE)
 ```
@@ -155,7 +148,7 @@ max(countFreq_new2$freq)
 
 ### Lets add DSM-IV to the analysis (using data from previous study published in ...)
 
-```{r}
+```{r eval=FALSE, echo = FALSE}
 # load data set
 source('/home/or/Documents/va_data/readData.r')
 ```
@@ -362,15 +355,16 @@ ggplot(freq4_top50, aes(x=as.factor(x),y=freq)) + geom_bar(stat="identity") + xl
 
 ### Pareto Q-Q plots
 
-```{r}
+```{r echo = FALSE}
 
 ParetoQQ(data = freq1$freq, main = "DSM-V 1st Sample")
 ```
 
-```{r}
+```{r echo = FALSE}
 ParetoQQ(data = freq2$freq, main = "DSM-V 2nd Sample")
 ```
-```{r}
+
+```{r echo = FALSE}
 ParetoQQ(data = freq3$freq, main = "DSM-IV large Sample")
 ```
 ```{r}
@@ -532,7 +526,7 @@ ggplot(freq5_top50, aes(x=as.factor(x),y=freq)) + geom_bar(stat="identity") + xl
 
 Lets to QQ pareto plot
 
-```{r}
+```{r echo = FALSE}
 ParetoQQ(data = freq5$freq, main = "DSM-V large Sample")
 ```
 
@@ -545,5 +539,23 @@ print(freq5[3,]) # All but amnesia (total of 2453 people)
 ```
 
 
+## Testing Power Law Distribution
+#### Prepare
+```{r}
+m_pl = displ$new(countFreqBigPCL5)
+
+est = estimate_xmin(m_pl) ## Estiamte parameters
+
+m_pl$setXmin(est) ## Update object
+```
+
+#### Test
+```{r}
+bs_p = bootstrap_p(m_pl)
+```
+#### p value
+```{r}
+bs_p$p
+```
 
 
