@@ -603,19 +603,19 @@ ggplot(freqNonbinar_top50, aes(x=as.factor(x),y=freq)) + geom_bar(stat="identity
 ### Lets test power law
 
 ```{r}
-m_pl5 = displ$new(countFreqBigPCL5_nonBinar$freq)
+m_pl5 = conpl$new(countFreqBigPCL5_nonBinar$freq) # this is a continuous power law distribution? 
 est5 = estimate_xmin(m_pl5) ## Estiamte parameters
 m_pl5$setXmin(est5) ## Update object
 plot(m_pl5)
 ```
 
 ```{r}
-bs_p5 = bootstrap_p(m_pl5, no_of_sims = 500, threads = 8)
+bs_p5 = bootstrap_p(m_pl5, no_of_sims = 1000, threads = 8)
 bs_p5$p
 plot(bs_p5)
 ```
 
-### Non binary distribution doesn't follow power law at all
+### Using continous power law distribution reveales that non binary distribution follow power law
 - Last - lets see most frequent profiles (although it is much less common than in the binary example)
 
 ```{r}
