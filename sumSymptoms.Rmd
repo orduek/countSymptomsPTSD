@@ -641,3 +641,41 @@ for (i in 1:nrow(freqNonbinar)) {
 plot(sympNum1, dist1)
 ```
 
+### Run PHQ9 using continuous (can also binarize)
+
+```{r}
+phqDf <- dplyr::select(vaDatclean, PHQ1,PHQ2,PHQ3,PHQ4,PHQ5,PHQ6,PHQ7,PHQ8,PHQ9)
+phqDf <- na.omit(phqDf)
+
+```
+
+#### Count
+
+```{r}
+phq9Count <- plyr::count(phqDf)
+```
+
+* Total of 38,681 combinations. Lets look at distibution etc.
+
+```{r}
+phqCounting <- phq9Count[order(phq9Count$freq, decreasing = TRUE),]
+phqCount_top50 <- phqCounting[1:50,]
+x <- as.factor(1:nrow(phqCount_top50))
+ggplot(phqCount_top50, aes(x=as.factor(x),y=freq)) + geom_bar(stat="identity") + xlab("Combination Of Symptoms") + theme_minimal()
+```
+
+### Looks similar to others. Lets test it
+
+```{r}
+m_plDep = conpl$new(phqCounting$freq) # this is a continuous power law distribution? 
+est6 = estimate_xmin(m_plDep) ## Estiamte parameters
+m_pl5$setXmin(est6) ## Update object
+plot(m_plDep)
+```
+
+```{r}
+bs_p6 = bootstrap_p(m_plDep, no_of_sims = 1000, threads = 8)
+bs_p6$p
+plot(bs_p6)
+```
+
