@@ -57,6 +57,7 @@ test$id <- as.factor(test$id)
 # count combinations
 plyr::count(test[, -1])
 ```
+
 ### Create dataframe of PCL and id only - but with binary PCL scores
 * Let us test with binary of pcl=>2 as yes and else is no (moderate symptoms)
 
@@ -457,8 +458,8 @@ hist(dist3)
 ## Summary:
 * We can see much less possible combinations than expected.
 * It seems like frequency of each symptoms' combination is close to compatible with power law
-* The most frequent profile endores (by far) is all symptoms
-* The second most is usually all syptoms but amnesia (with one sample shows all symptoms but risky behaviour)
+* The most frequent profile endorses (by far) is all symptoms
+* The second most is usually all symptoms but amnesia (with one sample shows all symptoms but risky behavior)
 
 
 ## Adding new PCL5 large dataset (from Ilan)
@@ -543,14 +544,14 @@ print(freq5[3,]) # All but amnesia (total of 2453 people)
 #### Prepare
 ```{r}
 m_pl = displ$new(countFreqBigPCL5$freq)
-est = estimate_xmin(m_pl) ## Estiamte parameters
+est = estimate_xmin(m_pl) ## Estimate parameters
 m_pl$setXmin(est) ## Update object
 plot(m_pl)
 ```
 
 #### Test
 ```{r}
-bs_p = bootstrap_p(m_pl, no_of_sims = 500, threads = 8)
+bs_p = bootstrap_p(m_pl, no_of_sims = 1000, threads = 10)
 ```
 #### p value
 ```{r}
@@ -655,7 +656,7 @@ phqDf <- na.omit(phqDf)
 phq9Count <- plyr::count(phqDf)
 ```
 
-* Total of 38,681 combinations. Lets look at distibution etc.
+* Total of 38,681 combinations. Lets look at distribution etc.
 
 ```{r}
 phqCounting <- phq9Count[order(phq9Count$freq, decreasing = TRUE),]
@@ -669,13 +670,101 @@ ggplot(phqCount_top50, aes(x=as.factor(x),y=freq)) + geom_bar(stat="identity") +
 ```{r}
 m_plDep = conpl$new(phqCounting$freq) # this is a continuous power law distribution? 
 est6 = estimate_xmin(m_plDep) ## Estiamte parameters
-m_pl5$setXmin(est6) ## Update object
+m_plDep$setXmin(est6) ## Update object
 plot(m_plDep)
 ```
 
 ```{r}
-bs_p6 = bootstrap_p(m_plDep, no_of_sims = 1000, threads = 8)
+bs_p6 = bootstrap_p(m_plDep, no_of_sims = 1000, threads = 10)
 bs_p6$p
 plot(bs_p6)
+```
+
+
+#### Most frequent symptoms
+
+```{r}
+phqCounting[1,] # non
+phqCounting[2,] #all
+
+```
+* Here we also see the two maximum power law distribution with the most frequent is denying all symptoms and the second most frequent accepts all
+
+
+## As of https://www.nature.com/articles/s41467-019-08746-5
+- Lets test the fit of each of those to the log normal (as they found it to be better fitted)
+
+
+## Comparing distributions
+
+### Compare between power-law and Log distribution of PCL5 big set
+
+#### PCL5 large data set
+
+```{r}
+m_pl = displ$new(countFreqBigPCL5$freq)
+est = estimate_xmin(m_pl) ## Estimate parameters
+m_pl$setXmin(est) ## Update object
+```
+
+```{r}
+m_ln = dislnorm$new(countFreqBigPCL5$freq)
+est = estimate_xmin(m_ln) ## Estimate parameters
+m_ln$setXmin(est) ## Update object
+
+```
+
+
+```{r}
+m_ln$setXmin(m_pl$getXmin())
+est2 = estimate_pars(m_ln)
+m_ln$setPars(est2$pars)
+
+comp = compare_distributions(m_pl, m_ln) # Test the two distributions
+comp$p_two_sided #not sig: inconclusive
+comp$p_one_sided #not sig: inconclusive
+```
+
+- There is no significant difference between the two
+
+### Compare PCL5 non binary
+```{r}
+m_pl5 = conpl$new(countFreqBigPCL5_nonBinar$freq) # this is a continuous power law distribution? 
+est5 = estimate_xmin(m_pl5) ## Estiamte parameters
+m_pl5$setXmin(est5) ## Update object
+
+## log
+m_ln5 = conlnorm$new(countFreqBigPCL5_nonBinar$freq)
+
+m_ln5$setXmin(m_pl5$getXmin())
+est2 = estimate_pars(m_ln5)
+m_ln5$setPars(est2$pars)
+
+comp = compare_distributions(m_pl5, m_ln5) # Test the two distributions
+comp$p_two_sided #not sig: inconclusive
+comp$p_one_sided #not sig: inconclusive
+```
+
+- Same result. Not a significant difference between log-normal distribution and power-law
+- Lets test other datasets, just to make sure.
+
+### PHQ9
+
+```{r}
+m_plDep = conpl$new(phqCounting$freq) # this is a continuous power law distribution? 
+est6 = estimate_xmin(m_plDep) ## Estiamte parameters
+m_plDep$setXmin(est6) ## Update object
+
+
+## log
+m_ln6 = conlnorm$new(phqCounting$freq)
+
+m_ln6$setXmin(m_plDep$getXmin())
+est7 = estimate_pars(m_ln6)
+m_ln6$setPars(est7$pars)
+
+comp = compare_distributions(m_plDep, m_ln6) # Test the two distributions
+comp$p_two_sided #not sig: inconclusive
+comp$p_one_sided #not sig: inconclusive
 ```
 
