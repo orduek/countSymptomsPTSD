@@ -1,0 +1,280 @@
+---
+title: "Symptoms of PTSD follow a power law distribution"
+author: "Or Duek & Tobias Spiller"
+output:
+  html_document:
+    df_print: paged
+---
+
+# Power law (scale-free)
+- This work assess fit of power-law to different data-sets in mental health
+- We fit three different distributions for each set of data:
+  1. Power-law
+  2. log-normal
+  3. exponential
+  
+
+```{r echo = FALSE, results='hide', message=FALSE, comment=FALSE, warning=FALSE}
+## load libraries
+require(foreign)
+require(tidyverse)
+require(ReIns)
+require("poweRlaw")
+```
+
+### First data-set 30k PTSD patients
+- For each data set we:
+  1. Load and clean data
+  2. Binarize (?)
+  3. Calculate profiles (combinations of symptoms) and their frequencies (how many patients per profile)
+  
+```{r}
+dfPCL5 <- read.spss('/home/or/Documents/pcl5_vaData/pcl5_100k/PCL5_130K_FY19.sav', to.data.frame = TRUE)
+
+dfPCL5 <- dfPCL5[,5:24]
+dfPCL5 <- na.omit(dfPCL5)
+```
+
+```{r echo=FALSE}
+dfPCL5_toBinarize <- dfPCL5
+for (i in 1:20){
+  # becuase under 10 its PCLN01 (02,03) need to add zero so run if
+  if (i<10){
+  nam <- paste("PCLN0", i, sep = "")  
+  }
+  else {
+    nam <- paste("PCLN", i, sep = "")
+  }
+  pcl <- paste("PCL", i, sep = "")
+  dfPCL5_toBinarize[pcl] <- dplyr::case_when(dfPCL5_toBinarize[nam]<=1 ~ 'NO', dfPCL5_toBinarize[nam]>=2 ~ 'YES')
+  
+}
+
+# create specific dataframe
+dfbigPCL5_Binary2 <- data_frame(dfPCL5_toBinarize[21:40])
+countFreqBigPCL5 <- plyr::count(dfbigPCL5_Binary2)
+```
+
+### A total of 8174 combinations. 
+- Describe frequencies
+
+```{r}
+## count how many with only one
+sum(countFreqBigPCL5$freq==1)
+# percentage
+sum(countFreqBigPCL5$freq==1) / nrow(countFreqBigPCL5)
+# count more than one less than ten
+sum(countFreqBigPCL5$freq<10) - sum(countFreqBigPCL5$freq==1)
+max(countFreqBigPCL5$freq)
+max(countFreqBigPCL5$freq) / nrow(dfbigPCL5_Binary2)
+```
+
+- Plot the top 50 profiles
+
+```{r, echo=FALSE}
+freq5 <- countFreqBigPCL5[order(countFreqBigPCL5$freq, decreasing = TRUE),]
+freq5_top50 <- freq5[1:50,]
+x <- as.factor(1:nrow(freq5_top50))
+ggplot(freq5_top50, aes(x=as.factor(x),y=freq)) + geom_bar(stat="identity") + xlab("Combination Of Symptoms") + theme_minimal()
+```
+
+### Test distributions
+#### Power-law
+
+```{r, echo=FALSE}
+m_pl = displ$new(countFreqBigPCL5$freq)
+est = estimate_xmin(m_pl) ## Estimate parameters
+m_pl$setXmin(est) ## Update object
+#plot(m_pl)
+```
+
+* Use bootstrap to test significant level 
+
+```{r, echo=FALSE}
+bs_p = bootstrap_p(m_pl, no_of_sims = 1000, threads = 10)
+plot(bs_p)
+```
+
+#### Log-Normal
+
+```{r}
+m_ln = dislnorm$new(countFreqBigPCL5$freq)
+est_ln = estimate_xmin(m_ln) ## Estimate parameters
+m_ln$setXmin(est_ln)
+#plot(m_ln)
+```
+
+```{r, echo=FALSE}
+bs_ln = bootstrap(m_ln, no_of_sims = 1000, threads = 10)
+plot(bs_ln)
+```
+
+#### Exponential
+
+```{r}
+m_exp = disexp$new(countFreqBigPCL5$freq)
+est_exp = estimate_xmin(m_exp) ## Estimate parameters
+m_exp$setXmin(est_exp)
+```
+```{r, echo=FALSE}
+bs_exp = bootstrap_p(m_exp, no_of_sims = 1000, threads = 10)
+plot(bs_exp)
+```
+
+### Compare distributions
+- Lognormal and power-law
+
+```{r}
+m_ln$setXmin(m_pl$getXmin())
+est2 = estimate_pars(m_ln)
+m_ln$setPars(est2$pars)
+
+comp = compare_distributions(m_pl, m_ln) # Test the two distributions
+comp$p_two_sided #not sig: inconclusive
+comp$p_one_sided #not sig: inconclusive
+```
+- results are inconclusive. 
+- Compare to exponential
+
+```{r}
+m_exp$setXmin(m_pl$getXmin())
+est3 = estimate_pars(m_exp)
+m_exp$setPars(est3$pars)
+
+comp2 = compare_distributions(m_pl, m_exp) # Test the two distributions
+comp2$p_two_sided #not sig: inconclusive
+comp2$p_one_sided #not sig: inconclusive
+```
+
+- Still inconclusive, but seems closer to significant differece.
+
+## Move on to second database - DSM-IV
+
+```{r echo = FALSE, results='hide'}
+# load data set
+source('/home/or/Documents/va_data/readData.r')
+
+# all patientes with PTSD and PCLTOT
+pclAll <- dplyr::filter(vaDatclean, !is.na(BPCLTOT))
+# plot pcl total score 
+hist(pclAll$BPCLTOT)
+# we have a minimum of 2 - so we have some NAs - let remove them
+pclAll_Nas <- filter(pclAll, BPCLTOT <=16)
+# total of 20 subjects with 16 or less in PCL (i.e. at least one missing variable)
+# we can remove them from analysis
+pclAll <- filter(pclAll, BPCLTOT >=17)
+# 159577 patients
+#pclNetwork <- pclNoNa # just medicated
+pclNetwork <- pclAll
+nrow(pclNetwork)
+hist(pclNetwork$BPCLTOT)
+# take just pcl
+pclItems <- dplyr::select(pclAll, starts_with("PCL"))
+pclItems_noCluster <- dplyr::select(pclItems, -PCLFY, -PCLSURVEYDATE, -PCLRAWSCORE)
+nrow(pclItems_noCluster)
+pclItems_noCluster <- na.omit(pclItems_noCluster)
+nrow(pclItems_noCluster)
+
+# Binarization
+dfPCL4 <- pclItems_noCluster
+# using PCL-4 recommended threshold is 3+ (not 2+ as in PCL5)
+for (i in 1:17){
+  nam = paste("PCL", i, sep = "")
+  pcl <- paste("PCLB", i, sep = "")
+  dfPCL4[pcl] <- dplyr::case_when(dfPCL4[nam]<=2 ~ 'NO', dfPCL4[nam]>=3 ~ 'YES')
+  
+}
+
+# create specific dataframe
+id = 1:nrow(dfPCL4)
+dfPCL4_Binary <- data_frame(id, dfPCL4[18:34])
+countFreq_pcl4 <- plyr::count(dfPCL4_Binary[,-1])
+
+```
+
+
+- Frequencies:
+
+```{r}
+## count how many with only one
+sum(countFreq_pcl4$freq==1)
+# percentage
+sum(countFreq_pcl4$freq==1) / nrow(countFreq_pcl4)
+# count more than one less than ten
+sum(countFreq_pcl4$freq<10) - sum(countFreq_pcl4$freq==1)
+max(countFreq_pcl4$freq)
+max(countFreq_pcl4$freq) / nrow(dfPCL4_Binary)
+```
+
+- Plot the top 50 profiles
+
+```{r, echo=FALSE}
+freq4 <- countFreq_pcl4[order(countFreq_pcl4$freq, decreasing = TRUE),]
+freq4_top50 <- freq4[1:50,]
+x <- as.factor(1:nrow(freq4_top50))
+ggplot(freq4_top50, aes(x=as.factor(x),y=freq)) + geom_bar(stat="identity") + xlab("Combination Of Symptoms") + theme_minimal()
+```
+
+```{r}
+m4_pl = displ$new(countFreq_pcl4$freq)
+est_m4 = estimate_xmin(m4_pl) ## Estimate parameters
+m4_pl$setXmin(est_m4) ## Update object
+```
+
+* Use bootstrap to test significant level 
+
+```{r, echo=FALSE}
+bs4_p = bootstrap_p(m4_pl, no_of_sims = 1000, threads = 10)
+plot(bs4_p)
+```
+
+#### Log-Normal
+
+```{r}
+m4_ln = dislnorm$new(countFreq_pcl4$freq)
+est4_ln = estimate_xmin(m4_ln) ## Estimate parameters
+m4_ln$setXmin(est4_ln)
+#plot(m_ln)
+```
+
+```{r, echo=FALSE}
+bs4_ln = bootstrap(m4_ln, no_of_sims = 1000, threads = 10)
+plot(bs4_ln)
+```
+
+#### Exponential
+
+```{r}
+m4_exp = disexp$new(countFreq_pcl4$freq)
+est4_exp = estimate_xmin(m4_exp) ## Estimate parameters
+m4_exp$setXmin(est4_exp)
+```
+```{r, echo=FALSE}
+bs_exp = bootstrap_p(m_exp, no_of_sims = 1000, threads = 10)
+plot(bs_exp)
+```
+
+### Compare distributions
+- Lognormal and power-law
+
+```{r}
+m4_ln$setXmin(m4_pl$getXmin())
+est4_comp = estimate_pars(m4_ln)
+m4_ln$setPars(est4_comp$pars)
+
+comp = compare_distributions(m4_pl, m4_ln) # Test the two distributions
+comp$p_two_sided #not sig: inconclusive
+comp$p_one_sided #not sig: inconclusive
+```
+- results are inconclusive. 
+- Compare to exponential
+
+```{r}
+m4_exp$setXmin(m4_pl$getXmin())
+est4_exp = estimate_pars(m4_exp)
+m4_exp$setPars(est4_exp$pars)
+
+comp3 = compare_distributions(m4_pl, m4_exp) # Test the two distributions
+comp3$p_two_sided #not sig: inconclusive
+comp3$p_one_sided #not sig: inconclusive
+```

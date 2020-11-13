@@ -111,7 +111,7 @@ summary(df_newClean$AGE_OCT01)
 ```{r}
 df_newClean2 <- df_newClean
 for (i in 1:20){
-  # becuase under 10 its PCLN01 (02,03) need to add zero so run if
+  # because under 10 its PCLN01 (02,03) need to add zero so run if
   if (i<10){
   nam <- paste("PCLN0", i, sep = "")  
   }
@@ -736,6 +736,16 @@ m_pl5$setXmin(est5) ## Update object
 ## log
 m_ln5 = conlnorm$new(countFreqBigPCL5_nonBinar$freq)
 
+e <- estimate_xmin(m_ln5)
+bs_mln5 <- bootstrap_p(m_ln5, no_of_sims = 1000, threads = 10)
+bs_mln5$p
+plot(bs_mln5)
+```
+
+* Seems like log is less strong than power-law. Lets compare.
+
+```{r}
+
 m_ln5$setXmin(m_pl5$getXmin())
 est2 = estimate_pars(m_ln5)
 m_ln5$setPars(est2$pars)
@@ -747,6 +757,7 @@ comp$p_one_sided #not sig: inconclusive
 
 - Same result. Not a significant difference between log-normal distribution and power-law
 - Lets test other datasets, just to make sure.
+- So not significantly different, but still p value of bootsraping seems very different between the two distributions. 
 
 ### PHQ9
 
@@ -767,4 +778,18 @@ comp = compare_distributions(m_plDep, m_ln6) # Test the two distributions
 comp$p_two_sided #not sig: inconclusive
 comp$p_one_sided #not sig: inconclusive
 ```
+
+- Compare to exponential
+```{r}
+m_exp = conexp$new(phqCounting$freq)
+
+m_exp$setXmin(m_plDep$getXmin())
+est8 = estimate_pars(m_exp)
+m_exp$setPars(est8$pars)
+
+comp = compare_distributions(m_plDep, m_exp) # Test the two distributions
+comp$p_two_sided #different from exponential distribution (.06)
+comp$p_one_sided #sig
+```
+
 
