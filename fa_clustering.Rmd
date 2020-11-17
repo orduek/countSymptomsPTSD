@@ -1,0 +1,156 @@
+---
+title: "Factor analysis and other clustering methods"
+output: html_notebook
+---
+
+## Factor analysis
+- Here we try to present the effect of the power law distribution on factor analysis
+- We also show it in other graphical manners 
+
+```{r}
+# Create new data frame
+sapply(dfPCL5, class)
+countCon <- plyr::count(dfPCL5)
+#dfPCL5 <- dfPCL5 %>% mutate_if(is.numeric,as.character)
+# join the two so we have frequency next to each individual
+#dataCon <- dplyr::full_join(dfPCL5_toBinarize, countCon)
+dataxCon <- dplyr::full_join(dfPCL5_toBinarize, countFreqBigPCL5, by = c("PCL1" = "PCL1", "PCL2" = "PCL2", "PCL3" = "PCL3", "PCL4" = "PCL4", "PCL5" = "PCL5", "PCL6" = "PCL6", "PCL7" = "PCL7", "PCL8" = "PCL8", "PCL9" = "PCL9", "PCL10" = "PCL10", "PCL11" = "PCL11", "PCL12" = "PCL12", 
+ "PCL13" = "PCL13", "PCL14" = "PCL14", "PCL15" = "PCL15", "PCL16" = "PCL16", "PCL17" = "PCL17", "PCL18" = "PCL18", "PCL19" = "PCL19", "PCL20" = "PCL20"))
+
+```
+
+```{r}
+dsm5Fac_Con <- '
+      Int =~ PCLN01 + PCLN02 + PCLN03 + PCLN04 + PCLN05
+      Av =~ PCLN06 + PCLN07
+      An =~ PCLN08 + PCLN09 + PCLN10 + PCLN11 + PCLN12 + PCLN13 + PCLN14 
+      Hyper =~ PCLN15 + PCLN16 + PCLN17 + PCLN18 + PCLN19 + PCLN20'
+
+```
+
+```{r}
+iterateCFA <- function(data, n_itr, filter) {
+  
+ # n_itr = 100 # set number of iterations
+  results_con = matrix(nrow = n_itr, ncol = 6)#[1:n_itr, 6]
+  # set filter (here we take all with freq lower than 10)
+  if (filter=='>') {
+    print('More than')
+    dataN_Con <- filter(data, freq > 10)  
+  } else {
+    print ('Less than')
+    dataN_Con <- filter(data, freq < 10)  
+  }
+  
+  for (i in 1:n_itr) {
+    # filter and sample data
+    dfSamp <- sample_n(dataN_Con, 200) 
+    pcl5Model <- cfa(dsm5Fac_Con, data = dfSamp[,1:20], estimator = "WLSMV")
+    results_con[i,] <- fitMeasures(pcl5Model, c("chisq","df","pvalue","srmr","cfi","rmsea"))
+    
+  }
+  # create a dataframe from the matrix
+  results <- data.frame(chisq = results_con[,1], df = results_con[,2],
+                                               pvalue = results_con[,3], srmr = results_con[,4],
+                                               cfi = results_con[,5], rmsea = results_con[,6])
+
+ 
+  # if (graph==TRUE) {
+  # MASS::truehist(results10_fit$cfi)
+  # }
+  #  return(results)
+}
+```
+
+```{r}
+conBigger10 <- iterateCFA(dataxCon, n_itr = 100, filter = '>') # failing
+MASS::truehist(conBigger10$cfi, xlab = "CFI of all that higher than 10")
+# now lower than ten
+
+conSmaller10 <- iterateCFA(dataxCon, n_itr = 100, filter = '<')
+MASS::truehist(conSmaller10$cfi, xlab = "CFI of all that lower than 10")
+summary(conSmaller10)
+summary(conBigger10)
+```
+
+- Looks similar
+## Hirarchical Clustering
+```{r}
+#dfbigPCL5_Binary2 <- na.omit(dfbigPCL5_Binary2)
+distace_df <- dist(dfPCL5)
+
+hcluster <- hclust(distace_df)
+hcd <- as.dendrogram(hcluster)
+
+nodePar <- list(lab.cex = 0.6, pch = c(20, 19),
+                cex = 0.7, col = c("green","yellow"))
+pdf('clusterGraph.pdf')
+plot(hcd)#, nodePar = nodePar)
+dev.off()
+
+
+# Ward Hierarchical Clustering
+d <- dist(dfPCL5, method = "euclidean") # distance matrix
+fit1 <- hclust(d)#, method="ward")
+plot(fit1) # display dendogram
+
+groups <- cutree(fit1, k=5) # cut tree into 5 clusters
+# draw dendogram with red borders around the 5 clusters
+rect.hclust(fit1, k=5, border="red")
+
+
+```
+
+
+## K-means
+- Here the idea is to create two/three factors and plot them. We expect a big "cloud" and the rest should be scattered.
+
+```{r}
+fit <- kmeans(dfPCL5, 3) # 5 cluster solution
+
+library(cluster)
+library(fpc)
+clusplot(dfPCL5, fit$cluster, color=TRUE, shade=TRUE,
+   labels=2, lines=0)
+
+# Centroid Plot against 1st 2 discriminant functions
+
+plotcluster(dfPCL5, fit$cluster)
+
+
+# get cluster means
+aggregate(mydata,by=list(fit$cluster),FUN=mean)
+# append cluster assignment
+mydata <- data.frame(mydata, fit$cluster)
+pca <- prcomp(dfPCL5, rank = 2)
+pca <- prcomp(dfPCL5, center = TRUE, scale = TRUE)
+ggplot(pca, aes(x=pca$rotation[,1], y=pca$rotation['PC2'])) + geom_jitter()
+```
+
+
+
+```{r}
+results_con = matrix(nrow = n_itr, ncol = 6)#[1:n_itr, 6]
+  # set filter (here we take all with freq lower than 10)
+  if (filter=='>') {
+    print('More than')
+    dataN_Con <- filter(dataxCon, freq > 10)  
+  } else {
+    print ('Less than')
+    dataN_Con <- filter(data, freq < 10)  
+  }
+  
+  for (i in 1:n_itr) {
+    # filter and sample data
+    dfSamp <- sample_n(dataN_Con, 500) 
+    pcl5Model <- cfa(dsm5Fac_Con, data = dfSamp[,1:20], estimator = "WLSMV")
+    results_con[i,] <- fitMeasures(dsm5Fac_Con, c("chisq","df","pvalue","srmr","cfi","rmsea"))
+    
+  }
+  # create a dataframe from the matrix
+  results <- data.frame(chisq = results_con[,1], df = results_con[,2],
+                                               pvalue = results_con[,3], srmr = results_con[,4],
+                                               cfi = results_con[,5], rmsea = results_con[,6])
+
+```
+
