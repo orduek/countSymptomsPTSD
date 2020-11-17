@@ -40,7 +40,7 @@ iterateCFA <- function(data, n_itr, filter) {
   
   for (i in 1:n_itr) {
     # filter and sample data
-    dfSamp <- sample_n(dataN_Con, 200) 
+    dfSamp <- sample_n(dataN_Con, 500) 
     pcl5Model <- cfa(dsm5Fac_Con, data = dfSamp[,1:20], estimator = "WLSMV")
     results_con[i,] <- fitMeasures(pcl5Model, c("chisq","df","pvalue","srmr","cfi","rmsea"))
     
