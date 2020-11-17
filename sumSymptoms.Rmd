@@ -20,6 +20,7 @@ require(foreign)
 require(tidyverse)
 require(ReIns)
 require("poweRlaw")
+require(lavaan)
 ```
 
 ```{r echo = FALSE}
@@ -494,7 +495,7 @@ for (i in 1:20){
 
 ```{r}
 # create specific dataframe
-dfbigPCL5_Binary2 <- data_frame(dfPCL5_toBinarize[21:40])
+dfbigPCL5_Binary2 <- data_frame(dfPCL5_toBinarize[25:44])
 countFreqBigPCL5 <- plyr::count(dfbigPCL5_Binary2)
 ```
 
@@ -792,4 +793,129 @@ comp$p_two_sided #different from exponential distribution (.06)
 comp$p_one_sided #sig
 ```
 
+## Factor analysis and testing of sub-samples
+- Create data frame
+
+```{r}
+# Create new data frame
+data_for_sampling <- dfbigPCL5_Binary2 
+### Count frequency of profiles
+data_for_sampling_counted <- plyr::count(dfPCL5_toBinarize[25:44])
+# join the two so we have frequency next to each individual
+datax <- dplyr::full_join(data_for_sampling, data_for_sampling_counted)
+```
+
+
+```{r}
+#cluster B (items 1-5), cluster C (items 6-7), cluster D (items 8-14), and cluster E (items 15-20).
+
+dsm5Fac <- '
+      Int =~ PCL1 + PCL2 + PCL3 + PCL4 + PCL5
+      Av =~ PCL6 + PCL7
+      An =~ PCL8 + PCL9 + PCL10 + PCL11 + PCL12 + PCL13 + PCL14 
+      Hyper =~ PCL15 + PCL16 + PCL17 + PCL18 + PCL19 + PCL20'
+
+pcl5Model <- cfa(dsm5Fac, data = datax)
+result_fit <- fitMeasures(pcl5Model)
+```
+
+### Iterate and sample N subjects from the total sample
+
+```{r}
+n_itr = 500 # set number of iterations
+results = matrix(nrow = n_itr, ncol = 6)#[1:n_itr, 6]
+# set filter (here we take all with freq lower than 10)
+dataN1 <- filter(datax, freq < 10)
+for (i in 1:n_itr) {
+  # filter and sample data
+  dfSamp <- sample_n(dataN1, 500) 
+  pcl5Model <- cfa(dsm5Fac, data = dfSamp, estimator = "WLSMV")
+  results[i,] <- fitMeasures(pcl5Model, c("chisq","df","pvalue","srmr","cfi","rmsea"))
+  
+}
+# create a dataframe from the matrix
+results_fit <- data.frame(chisq = results[,1], df = results[,2],
+                                             pvalue = results[,3], srmr = results[,4],
+                                             cfi = results[,5], rmsea = results[,6])
+```
+
+### Plot fit
+
+```{r}
+MASS::truehist(results_fit$rmsea)
+```
+
+### Now we do the same but with the upper side of the frequency (more than 10)
+
+
+```{r}
+n_itr = 100 # set number of iterations
+results_10 = matrix(nrow = n_itr, ncol = 6)#[1:n_itr, 6]
+# set filter (here we take all with freq lower than 10)
+dataN2 <- filter(datax, freq >= 10)
+for (i in 1:n_itr) {
+  # filter and sample data
+  dfSamp <- sample_n(dataN2, 500) 
+  pcl5Model <- cfa(dsm5Fac, data = dfSamp, estimator = "WLSMV")
+  results_10[i,] <- fitMeasures(pcl5Model, c("chisq","df","pvalue","srmr","cfi","rmsea"))
+  
+}
+# create a dataframe from the matrix
+results10_fit <- data.frame(chisq = results_10[,1], df = results_10[,2],
+                                             pvalue = results_10[,3], srmr = results_10[,4],
+                                             cfi = results_10[,5], rmsea = results_10[,6])
+
+MASS::truehist(results10_fit$cfi)
+```
+### As it fails many times - lets try to use the continuous variable
+
+```{r}
+# change all varibale to factors in pcl data base
+for (i in 1:20){
+  # becuase under 10 its PCLN01 (02,03) need to add zero so run if
+  if (i<10){
+  nam <- paste("PCLN0", i, sep = "")  
+  }
+  else {
+    nam <- paste("PCLN", i, sep = "")
+  }
+  
+  print(nam)
+  dfPCL5[nam] <- as.character(dfPCL5[nam])
+
+}
+
+
+
+dataxCon <- dplyr::full_join(dfPCL5, data_for_sampling_counted, by = c("PCLN01" = "PCL1", "PCLN02" = "PCL2", "PCLN03" = "PCL3", "PCLN04" = "PCL4", "PCLN05" = "PCL5", "PCLN06" = "PCL6", "PCLN07" = "PCL7", "PCLN08" = "PCL8", "PCLN09" = "PCL9", "PCLN10" = "PCL10", "PCLN11" = "PCL11", "PCLN12" = "PCL12", 
+"PCLN13" = "PCL13", "PCLN14" = "PCL14", "PCLN15" = "PCL15", "PCLN16" = "PCL16", "PCLN17" = "PCL17", "PCLN18" = "PCL18", "PCLN19" = "PCL19", "PCLN20" = "PCL20"))
+```
+
+```{r}
+dsm5Fac_Con <- '
+      Int =~ PCLN01 + PCLN02 + PCLN03 + PCLN04 + PCLN05
+      Av =~ PCLN06 + PCLN07
+      An =~ PCLN08 + PCLN09 + PCLN10 + PCLN11 + PCLN12 + PCLN13 + PCLN14 
+      Hyper =~ PCLN15 + PCLN16 + PCLN17 + PCLN18 + PCLN19 + PCLN20'
+```
+
+```{r}
+n_itr = 100 # set number of iterations
+results_con = matrix(nrow = n_itr, ncol = 6)#[1:n_itr, 6]
+# set filter (here we take all with freq lower than 10)
+dataN_Con <- filter(dataxCon, freq >= 10)
+for (i in 1:n_itr) {
+  # filter and sample data
+  dfSamp <- sample_n(dataN2, 500) 
+  pcl5Model <- cfa(dsm5Fac, data = dfSamp, estimator = "WLSMV")
+  results_con[i,] <- fitMeasures(pcl5Model, c("chisq","df","pvalue","srmr","cfi","rmsea"))
+  
+}
+# create a dataframe from the matrix
+results10_fit <- data.frame(chisq = results_con[,1], df = results_con[,2],
+                                             pvalue = results_con[,3], srmr = results_con[,4],
+                                             cfi = results_con[,5], rmsea = results_con[,6])
+
+MASS::truehist(results10_fit$cfi)
+```
 

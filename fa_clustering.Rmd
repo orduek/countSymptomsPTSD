@@ -9,11 +9,7 @@ output: html_notebook
 
 ```{r}
 # Create new data frame
-sapply(dfPCL5, class)
-countCon <- plyr::count(dfPCL5)
-#dfPCL5 <- dfPCL5 %>% mutate_if(is.numeric,as.character)
 # join the two so we have frequency next to each individual
-#dataCon <- dplyr::full_join(dfPCL5_toBinarize, countCon)
 dataxCon <- dplyr::full_join(dfPCL5_toBinarize, countFreqBigPCL5, by = c("PCL1" = "PCL1", "PCL2" = "PCL2", "PCL3" = "PCL3", "PCL4" = "PCL4", "PCL5" = "PCL5", "PCL6" = "PCL6", "PCL7" = "PCL7", "PCL8" = "PCL8", "PCL9" = "PCL9", "PCL10" = "PCL10", "PCL11" = "PCL11", "PCL12" = "PCL12", 
  "PCL13" = "PCL13", "PCL14" = "PCL14", "PCL15" = "PCL15", "PCL16" = "PCL16", "PCL17" = "PCL17", "PCL18" = "PCL18", "PCL19" = "PCL19", "PCL20" = "PCL20"))
 
