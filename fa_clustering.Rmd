@@ -69,7 +69,8 @@ summary(conSmaller10)
 summary(conBigger10)
 ```
 
-- Looks similar
+- The most frequent fits better.
+
 ## Hirarchical Clustering
 ```{r}
 #dfbigPCL5_Binary2 <- na.omit(dfbigPCL5_Binary2)
