@@ -21,6 +21,9 @@ require(tidyverse)
 require(ReIns)
 require("poweRlaw")
 require(lavaan)
+
+# load specific fucntions
+source('utils.r') # load functions
 ```
 
 ### First data-set 30k PTSD patients
@@ -52,7 +55,7 @@ for (i in 1:20){
 }
 
 # create specific dataframe
-dfbigPCL5_Binary2 <- data_frame(dfPCL5_toBinarize[21:40])
+dfbigPCL5_Binary2 <- tibble(dfPCL5_toBinarize[21:40])
 countFreqBigPCL5 <- plyr::count(dfbigPCL5_Binary2)
 ```
 
@@ -86,7 +89,8 @@ ggplot(freq5_top50, aes(x=as.factor(x),y=freq)) + geom_bar(stat="identity") + xl
 m_pl = displ$new(countFreqBigPCL5$freq)
 est = estimate_xmin(m_pl) ## Estimate parameters
 m_pl$setXmin(est) ## Update object
-#plot(m_pl)
+plot(m_pl)
+lines(m_pl, col = 2) # draw fitted line (color=red)
 ```
 
 * Use bootstrap to test significant level 
@@ -102,7 +106,8 @@ plot(bs_p)
 m_ln = dislnorm$new(countFreqBigPCL5$freq)
 est_ln = estimate_xmin(m_ln) ## Estimate parameters
 m_ln$setXmin(est_ln)
-#plot(m_ln)
+m <- plot(m_ln)
+lines(m_ln, col=3)
 ```
 
 ```{r, echo=FALSE}
@@ -146,136 +151,103 @@ comp2 = compare_distributions(m_pl, m_exp) # Test the two distributions
 comp2$p_two_sided #not sig: inconclusive
 comp2$p_one_sided #not sig: inconclusive
 ```
+### Fitting plot of all three
+
+```{r}
+plot(m_pl)
+lines(m_pl, col=2) # red
+lines(m_ln, col = 3) # green
+lines(m_exp, col = 4) # blue
+```
+It seems the power-law fitts a bit better then the log-normal and much better than the exponential
+
 
 - Still inconclusive, but seems closer to significant differece.
 
-## Move on to second database - DSM-IV
+## Factor analysis
 
-```{r echo = FALSE, results='hide'}
-# load data set
-source('/home/or/Documents/va_data/readData.r')
+```{r, echo=FALSE, include=FALSE}
+# Create new data frame
+# join the two so we have frequency next to each individual
+dataxCon <- dplyr::full_join(dfPCL5_toBinarize, countFreqBigPCL5, by = c("PCL1" = "PCL1", "PCL2" = "PCL2", "PCL3" = "PCL3", "PCL4" = "PCL4", "PCL5" = "PCL5", "PCL6" = "PCL6", "PCL7" = "PCL7", "PCL8" = "PCL8", "PCL9" = "PCL9", "PCL10" = "PCL10", "PCL11" = "PCL11", "PCL12" = "PCL12", 
+ "PCL13" = "PCL13", "PCL14" = "PCL14", "PCL15" = "PCL15", "PCL16" = "PCL16", "PCL17" = "PCL17", "PCL18" = "PCL18", "PCL19" = "PCL19", "PCL20" = "PCL20"))
+```
 
-# all patientes with PTSD and PCLTOT
-pclAll <- dplyr::filter(vaDatclean, !is.na(BPCLTOT))
-# plot pcl total score 
-hist(pclAll$BPCLTOT)
-# we have a minimum of 2 - so we have some NAs - let remove them
-pclAll_Nas <- filter(pclAll, BPCLTOT <=16)
-# total of 20 subjects with 16 or less in PCL (i.e. at least one missing variable)
-# we can remove them from analysis
-pclAll <- filter(pclAll, BPCLTOT >=17)
-# 159577 patients
-#pclNetwork <- pclNoNa # just medicated
-pclNetwork <- pclAll
-nrow(pclNetwork)
-hist(pclNetwork$BPCLTOT)
-# take just pcl
-pclItems <- dplyr::select(pclAll, starts_with("PCL"))
-pclItems_noCluster <- dplyr::select(pclItems, -PCLFY, -PCLSURVEYDATE, -PCLRAWSCORE)
-nrow(pclItems_noCluster)
-pclItems_noCluster <- na.omit(pclItems_noCluster)
-nrow(pclItems_noCluster)
+- Define the model (according to DSM-5 clustering)
 
-# Binarization
-dfPCL4 <- pclItems_noCluster
-# using PCL-4 recommended threshold is 3+ (not 2+ as in PCL5)
-for (i in 1:17){
-  nam = paste("PCL", i, sep = "")
-  pcl <- paste("PCLB", i, sep = "")
-  dfPCL4[pcl] <- dplyr::case_when(dfPCL4[nam]<=2 ~ 'NO', dfPCL4[nam]>=3 ~ 'YES')
-  
+```{r}
+dsm5Fac_Con <- '
+      Int =~ PCLN01 + PCLN02 + PCLN03 + PCLN04 + PCLN05
+      Av =~ PCLN06 + PCLN07
+      An =~ PCLN08 + PCLN09 + PCLN10 + PCLN11 + PCLN12 + PCLN13 + PCLN14 
+      Hyper =~ PCLN15 + PCLN16 + PCLN17 + PCLN18 + PCLN19 + PCLN20'
+
+```
+
+- First we compare higher and lower end of the distribution and iterate 500 times to get nice histogram
+
+```{r}
+conBigger10 <- iterateCFA(dataxCon, n_itr = 500, filter = '>', sample_size = 500) # failing
+MASS::truehist(conBigger10$cfi, xlab = "CFI of all that higher than 10")
+# now lower than ten
+
+conSmaller10 <- iterateCFA(dataxCon, n_itr = 500, filter = '<', sample_size = 500)
+MASS::truehist(conSmaller10$cfi, xlab = "CFI of all that lower than 10")
+summary(conSmaller10)
+summary(conBigger10)
+```
+
+- Plot presents CFI
+
+### Sample size effects
+- We test 100-1000 (steps of 50) possible sizes
+- Begin with most frequent
+
+```{r, echo=FALSE, warning=FALSE,  error=FALSE, message=FALSE}
+# most frequent
+# vecotr from sample size of 50 to 1000 in steps of 50
+size_n <- seq(100,1000, 50)
+res <- c()
+for (i in 1:length(size_n)){
+  print('sample size {size_n}')
+  conBigger10 <- iterateCFA(dataxCon, n_itr = 30, filter = '>', sample_size = size_n[i]) # failing
+  res[i] <- median(conBigger10$rmsea)
 }
 
-# create specific dataframe
-id = 1:nrow(dfPCL4)
-dfPCL4_Binary <- data_frame(id, dfPCL4[18:34])
-countFreq_pcl4 <- plyr::count(dfPCL4_Binary[,-1])
-
+d <- data.frame(res,size_n)
+ggplot(data=d, aes(y=res, x=size_n)) + geom_jitter() + geom_smooth() + xlab("rmsea") + theme_minimal()
 ```
 
+- Do the same with the lower tail of the distribution:
+```{r, echo=FALSE, message=FALSE, warning=FALSE, error=FALSE}
+res1 <- c()
+for (i in 1:length(size_n)){
+  print('sample size {size_n}')
+  conSmaller10 <- iterateCFA(dataxCon, n_itr = 30, filter = '<', sample_size = size_n[i]) # failing
+  res1[i] <- median(conSmaller10$rmsea)
+}
 
-- Frequencies:
-
-```{r}
-## count how many with only one
-sum(countFreq_pcl4$freq==1)
-# percentage
-sum(countFreq_pcl4$freq==1) / nrow(countFreq_pcl4)
-# count more than one less than ten
-sum(countFreq_pcl4$freq<10) - sum(countFreq_pcl4$freq==1)
-max(countFreq_pcl4$freq)
-max(countFreq_pcl4$freq) / nrow(dfPCL4_Binary)
+d1 <- data.frame(res1,size_n)
+ggplot(data=d1, aes(y=res1, x=size_n)) + geom_jitter() + geom_smooth() +  xlab("rmsea") + theme_minimal()
 ```
 
-- Plot the top 50 profiles
+- Lastly, all 
 
-```{r, echo=FALSE}
-freq4 <- countFreq_pcl4[order(countFreq_pcl4$freq, decreasing = TRUE),]
-freq4_top50 <- freq4[1:50,]
-x <- as.factor(1:nrow(freq4_top50))
-ggplot(freq4_top50, aes(x=as.factor(x),y=freq)) + geom_bar(stat="identity") + xlab("Combination Of Symptoms") + theme_minimal()
-```
+```{r, echo=FALSE, warning=FALSE,  message=FALSE, error=FALSE}
+res2 <- c()
+results_con <-  matrix(nrow = 30, ncol = 6)
+for (i in 1:length(size_n)){
+ # print('sample size {size_n}')
+  for (n in 1:30){
+    dfSamp <- sample_n(dfPCL5, size_n[i]) 
+    pcl5Model <- cfa(dsm5Fac_Con, data = dfSamp[,1:20], estimator = "WLSMV")
+    results_con[n,] <- fitMeasures(pcl5Model, c("chisq","df","pvalue","srmr","cfi","rmsea"))
+    
+  }
+  
+  res2[i] <- median(results_con[,6])
+}
 
-```{r}
-m4_pl = displ$new(countFreq_pcl4$freq)
-est_m4 = estimate_xmin(m4_pl) ## Estimate parameters
-m4_pl$setXmin(est_m4) ## Update object
-```
-
-* Use bootstrap to test significant level 
-
-```{r, echo=FALSE}
-bs4_p = bootstrap_p(m4_pl, no_of_sims = 1000, threads = 10)
-plot(bs4_p)
-```
-
-#### Log-Normal
-
-```{r}
-m4_ln = dislnorm$new(countFreq_pcl4$freq)
-est4_ln = estimate_xmin(m4_ln) ## Estimate parameters
-m4_ln$setXmin(est4_ln)
-#plot(m_ln)
-```
-
-```{r, echo=FALSE}
-bs4_ln = bootstrap(m4_ln, no_of_sims = 1000, threads = 10)
-plot(bs4_ln)
-```
-
-#### Exponential
-
-```{r}
-m4_exp = disexp$new(countFreq_pcl4$freq)
-est4_exp = estimate_xmin(m4_exp) ## Estimate parameters
-m4_exp$setXmin(est4_exp)
-```
-```{r, echo=FALSE}
-bs_exp = bootstrap_p(m_exp, no_of_sims = 1000, threads = 10)
-plot(bs_exp)
-```
-
-### Compare distributions
-- Lognormal and power-law
-
-```{r}
-m4_ln$setXmin(m4_pl$getXmin())
-est4_comp = estimate_pars(m4_ln)
-m4_ln$setPars(est4_comp$pars)
-
-comp = compare_distributions(m4_pl, m4_ln) # Test the two distributions
-comp$p_two_sided #not sig: inconclusive
-comp$p_one_sided #not sig: inconclusive
-```
-- results are inconclusive. 
-- Compare to exponential
-
-```{r}
-m4_exp$setXmin(m4_pl$getXmin())
-est4_exp = estimate_pars(m4_exp)
-m4_exp$setPars(est4_exp$pars)
-
-comp3 = compare_distributions(m4_pl, m4_exp) # Test the two distributions
-comp3$p_two_sided #not sig: inconclusive
-comp3$p_one_sided #not sig: inconclusive
+d2 <- data.frame(res2,size_n)
+ggplot(data=d2, aes(y=res2, x=size_n)) + geom_jitter() + geom_smooth() +  xlab("rmsea") + theme_minimal()
 ```

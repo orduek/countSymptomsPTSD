@@ -1,7 +1,47 @@
 ---
 title: "Factor analysis and other clustering methods"
-output: html_notebook
+output:
+  html_document:
+    df_print: paged
+  html_notebook: default
+  pdf_document: default
 ---
+
+```{r echo = FALSE, results='hide', message=FALSE, comment=FALSE, warning=FALSE}
+## load libraries
+require(foreign)
+require(tidyverse)
+require(ReIns)
+require("poweRlaw")
+require(lavaan)
+```
+
+```{r, echo=FALSE}
+dfPCL5 <- read.spss('/home/or/Documents/pcl5_vaData/pcl5_100k/PCL5_130K_FY19.sav', to.data.frame = TRUE)
+
+dfPCL5 <- dfPCL5[,5:24]
+dfPCL5 <- na.omit(dfPCL5)
+```
+
+```{r echo=FALSE}
+dfPCL5_toBinarize <- dfPCL5
+for (i in 1:20){
+  # becuase under 10 its PCLN01 (02,03) need to add zero so run if
+  if (i<10){
+  nam <- paste("PCLN0", i, sep = "")  
+  }
+  else {
+    nam <- paste("PCLN", i, sep = "")
+  }
+  pcl <- paste("PCL", i, sep = "")
+  dfPCL5_toBinarize[pcl] <- dplyr::case_when(dfPCL5_toBinarize[nam]<=1 ~ 'NO', dfPCL5_toBinarize[nam]>=2 ~ 'YES')
+  
+}
+
+# create specific dataframe
+dfbigPCL5_Binary2 <- data_frame(dfPCL5_toBinarize[21:40])
+countFreqBigPCL5 <- plyr::count(dfbigPCL5_Binary2)
+```
 
 ## Factor analysis
 - Here we try to present the effect of the power law distribution on factor analysis
@@ -25,7 +65,7 @@ dsm5Fac_Con <- '
 ```
 
 ```{r}
-iterateCFA <- function(data, n_itr, filter) {
+iterateCFA <- function(data, n_itr, filter, sample_size=500) {
   
  # n_itr = 100 # set number of iterations
   results_con = matrix(nrow = n_itr, ncol = 6)#[1:n_itr, 6]
@@ -35,12 +75,12 @@ iterateCFA <- function(data, n_itr, filter) {
     dataN_Con <- filter(data, freq > 10)  
   } else {
     print ('Less than')
-    dataN_Con <- filter(data, freq < 10)  
+    dataN_Con <- filter(data, freq <= 10)  
   }
   
   for (i in 1:n_itr) {
     # filter and sample data
-    dfSamp <- sample_n(dataN_Con, 500) 
+    dfSamp <- sample_n(dataN_Con, sample_size) 
     pcl5Model <- cfa(dsm5Fac_Con, data = dfSamp[,1:20], estimator = "WLSMV")
     results_con[i,] <- fitMeasures(pcl5Model, c("chisq","df","pvalue","srmr","cfi","rmsea"))
     
@@ -49,105 +89,74 @@ iterateCFA <- function(data, n_itr, filter) {
   results <- data.frame(chisq = results_con[,1], df = results_con[,2],
                                                pvalue = results_con[,3], srmr = results_con[,4],
                                                cfi = results_con[,5], rmsea = results_con[,6])
-
- 
-  # if (graph==TRUE) {
-  # MASS::truehist(results10_fit$cfi)
-  # }
-  #  return(results)
+  return(results)
 }
 ```
 
 ```{r}
-conBigger10 <- iterateCFA(dataxCon, n_itr = 100, filter = '>') # failing
+conBigger10 <- iterateCFA(dataxCon, n_itr = 100, filter = '>', sample_size = 300) # failing
 MASS::truehist(conBigger10$cfi, xlab = "CFI of all that higher than 10")
 # now lower than ten
 
-conSmaller10 <- iterateCFA(dataxCon, n_itr = 100, filter = '<')
+conSmaller10 <- iterateCFA(dataxCon, n_itr = 100, filter = '<', sample_size = 300)
 MASS::truehist(conSmaller10$cfi, xlab = "CFI of all that lower than 10")
 summary(conSmaller10)
 summary(conBigger10)
 ```
 
+
 - The most frequent fits better.
+- Lets test the effect of sample size on fitting (i.e. how much will be enough when we sampe most frequent and when we sample less).
 
-## Hirarchical Clustering
+### Sample size effects
+
 ```{r}
-#dfbigPCL5_Binary2 <- na.omit(dfbigPCL5_Binary2)
-distace_df <- dist(dfPCL5)
+# most frequent
+# vecotr from sample size of 50 to 1000 in steps of 50
+size_n <- seq(100,1000, 50)
+res <- c()
+for (i in 1:length(size_n)){
+  print('sample size {size_n}')
+  conBigger10 <- iterateCFA(dataxCon, n_itr = 30, filter = '>', sample_size = size_n[i]) # failing
+  res[i] <- median(conBigger10$rmsea)
+}
 
-hcluster <- hclust(distace_df)
-hcd <- as.dendrogram(hcluster)
-
-nodePar <- list(lab.cex = 0.6, pch = c(20, 19),
-                cex = 0.7, col = c("green","yellow"))
-pdf('clusterGraph.pdf')
-plot(hcd)#, nodePar = nodePar)
-dev.off()
-
-
-# Ward Hierarchical Clustering
-d <- dist(dfPCL5, method = "euclidean") # distance matrix
-fit1 <- hclust(d)#, method="ward")
-plot(fit1) # display dendogram
-
-groups <- cutree(fit1, k=5) # cut tree into 5 clusters
-# draw dendogram with red borders around the 5 clusters
-rect.hclust(fit1, k=5, border="red")
-
-
+d <- data.frame(res,size_n)
+ggplot(data=d, aes(y=res, x=size_n)) + geom_jitter() + geom_smooth() + xlab("rmsea") + theme_minimal()
 ```
 
-
-## K-means
-- Here the idea is to create two/three factors and plot them. We expect a big "cloud" and the rest should be scattered.
-
+- Do the same with the lower tail of the distribution:
 ```{r}
-fit <- kmeans(dfPCL5, 3) # 5 cluster solution
+res1 <- c()
+for (i in 1:length(size_n)){
+  print('sample size {size_n}')
+  conSmaller10 <- iterateCFA(dataxCon, n_itr = 30, filter = '<', sample_size = size_n[i]) # failing
+  res1[i] <- median(conSmaller10$rmsea)
+}
 
-library(cluster)
-library(fpc)
-clusplot(dfPCL5, fit$cluster, color=TRUE, shade=TRUE,
-   labels=2, lines=0)
-
-# Centroid Plot against 1st 2 discriminant functions
-
-plotcluster(dfPCL5, fit$cluster)
-
-
-# get cluster means
-aggregate(mydata,by=list(fit$cluster),FUN=mean)
-# append cluster assignment
-mydata <- data.frame(mydata, fit$cluster)
-pca <- prcomp(dfPCL5, rank = 2)
-pca <- prcomp(dfPCL5, center = TRUE, scale = TRUE)
-ggplot(pca, aes(x=pca$rotation[,1], y=pca$rotation['PC2'])) + geom_jitter()
+d1 <- data.frame(res1,size_n)
+ggplot(data=d1, aes(y=res1, x=size_n)) + geom_jitter() + geom_smooth() +  xlab("rmsea") + theme_minimal()
 ```
-
-
+- Lastly, all 
 
 ```{r}
-results_con = matrix(nrow = n_itr, ncol = 6)#[1:n_itr, 6]
-  # set filter (here we take all with freq lower than 10)
-  if (filter=='>') {
-    print('More than')
-    dataN_Con <- filter(dataxCon, freq > 10)  
-  } else {
-    print ('Less than')
-    dataN_Con <- filter(data, freq < 10)  
-  }
-  
-  for (i in 1:n_itr) {
-    # filter and sample data
-    dfSamp <- sample_n(dataN_Con, 500) 
+res2 <- c()
+results_con <-  matrix(nrow = 30, ncol = 6)
+for (i in 1:length(size_n)){
+ # print('sample size {size_n}')
+  for (n in 1:30){
+    dfSamp <- sample_n(dfPCL5, size_n[i]) 
     pcl5Model <- cfa(dsm5Fac_Con, data = dfSamp[,1:20], estimator = "WLSMV")
-    results_con[i,] <- fitMeasures(dsm5Fac_Con, c("chisq","df","pvalue","srmr","cfi","rmsea"))
+    results_con[n,] <- fitMeasures(pcl5Model, c("chisq","df","pvalue","srmr","cfi","rmsea"))
     
   }
-  # create a dataframe from the matrix
-  results <- data.frame(chisq = results_con[,1], df = results_con[,2],
-                                               pvalue = results_con[,3], srmr = results_con[,4],
-                                               cfi = results_con[,5], rmsea = results_con[,6])
+  
+  res2[i] <- median(results_con[,6])
+}
 
+d2 <- data.frame(res2,size_n)
+ggplot(data=d2, aes(y=res2, x=size_n)) + geom_jitter() + geom_smooth() +  xlab("rmsea") + theme_minimal()
 ```
+
+
 
