@@ -112,31 +112,114 @@ summary(conBigger10)
 
 ```{r}
 # most frequent
-# vecotr from sample size of 50 to 1000 in steps of 50
-size_n <- seq(100,1000, 50)
-res <- c()
+# vector from sample size of 50 to 1000 in steps of 50
+size_n <- seq(200,2000,100)
+nitr <- 1000
+CFI <- c()
+CFI_sd <- c()
+rmsea <- c()
+rmsea_sd <- c()
+p <- c()
+p_sd <- c()
+srmr <- c()
+srmr_sd <- c()
+
 for (i in 1:length(size_n)){
   print('sample size {size_n}')
-  conBigger10 <- iterateCFA(dataxCon, n_itr = 30, filter = '>', sample_size = size_n[i]) # failing
-  res[i] <- median(conBigger10$rmsea)
+  conBigger10 <- iterateCFA(datax, n_itr = nitr, filter = '>', sample_size = size_n[i]) # failing
+  CFI[i] <- median(conBigger10$cfi)
+  CFI_sd[i] <- sd(conBigger10$cfi)
+  rmsea[i] <- median(conBigger10$rmsea)
+  rmsea_sd[i] <- sd(conBigger10$rmsea)
+  p[i] <- median(conBigger10$p)
+  p_sd[i] <- sd(conBigger10$p)
+  srmr[i] <- median(conBigger10$srmr)
+  srmr_sd[i] <- sd(conBigger10$srmr)
 }
 
-d <- data.frame(res,size_n)
-ggplot(data=d, aes(y=res, x=size_n)) + geom_jitter() + geom_smooth() + xlab("rmsea") + theme_minimal()
+d_above <- data.frame(CFI, CFI_sd, rmsea, rmsea_sd, p, p_sd, srmr, srmr_sd, size_n)
 ```
 
-- Do the same with the lower tail of the distribution:
 ```{r}
-res1 <- c()
+# - Do the same with the lower tail of the distribution:
+
+CFI_1 <- c()
+CFI_sd_1 <- c()
+rmsea_1 <- c()
+rmsea_sd_1 <- c()
+p_1 <- c()
+p_sd_1 <- c()
+srmr_1 <- c()
+srmr_sd_1 <- c()
+
 for (i in 1:length(size_n)){
   print('sample size {size_n}')
-  conSmaller10 <- iterateCFA(dataxCon, n_itr = 30, filter = '<', sample_size = size_n[i]) # failing
-  res1[i] <- median(conSmaller10$rmsea)
+  conBigger10 <- iterateCFA(datax, n_itr = nitr, filter = '<', sample_size = size_n[i]) # failing
+  CFI_1[i] <- median(conBigger10$cfi)
+  CFI_sd_1[i] <- sd(conBigger10$cfi)
+  rmsea_1[i] <- median(conBigger10$rmsea)
+  rmsea_sd_1[i] <- sd(conBigger10$rmsea)
+  p_1[i] <- median(conBigger10$p)
+  p_sd_1[i] <- sd(conBigger10$p)
+  srmr_1[i] <- median(conBigger10$srmr)
+  srmr_sd_1[i] <- sd(conBigger10$srmr)
 }
-
-d1 <- data.frame(res1,size_n)
-ggplot(data=d1, aes(y=res1, x=size_n)) + geom_jitter() + geom_smooth() +  xlab("rmsea") + theme_minimal()
+d_below <- data.frame(CFI_1, CFI_sd_1, rmsea_1, rmsea_sd_1, p_1, p_sd_1, srmr_1, srmr_sd_1, size_n)
 ```
+
+```{r}
+# Prepare plots
+d_above$group <- c("1")
+d_below$group <- c("2")
+colnames(d_below) <- colnames(d_above)
+dx <- rbind(d_above, d_below)
+
+#Plot CFI
+ggplot(data=dx, aes(y=CFI, x=size_n, colour=group, group=group)) +
+  geom_point(size = 1.5) + 
+  geom_line() +
+  geom_errorbar(aes(ymin=CFI-CFI_sd, ymax=CFI+CFI_sd), width=.5, colour="black") +
+  xlab("Sample size") +
+  ylab("CFI") +
+  scale_y_continuous(limits = c(0.90, 1.0)) +
+  geom_hline(yintercept=0.95, linetype="dashed", size= 0.3) +
+  theme_minimal()
+
+
+# Plot RMSEA
+ggplot(data=dx, aes(y=rmsea, x=size_n, colour=group, group=group)) +
+  geom_point(size = 1.5) + 
+  geom_line() +
+  geom_errorbar(aes(ymin=rmsea-rmsea_sd, ymax=rmsea+rmsea_sd), width=.5, colour="black") +
+  xlab("Sample size") +
+  ylab("rmsea") +
+  scale_y_continuous(limits = c(0.0, 0.06)) +
+  geom_hline(yintercept=0.05, linetype="dashed", size= 0.3) +
+  theme_minimal()
+
+# Plot p-value
+ggplot(data=dx, aes(y=p, x=size_n, colour=group, group=group)) +
+  geom_point(size = 1.5) + 
+  geom_line() +
+  geom_errorbar(aes(ymin=p-p_sd, ymax=p+p_sd), width=.5, colour="black") +
+  xlab("Sample size") +
+  ylab("p-value") +
+  scale_y_continuous(limits = c(0.0, 0.1)) +
+  theme_minimal()
+
+# Plot SRMR
+ggplot(data=dx, aes(y=srmr, x=size_n, colour=group, group=group)) +
+  geom_point(size = 1.5) + 
+  geom_line() +
+  geom_errorbar(aes(ymin=srmr-srmr_sd, ymax=srmr+srmr_sd), width=.5, colour="black") +
+  xlab("Sample size") +
+  ylab("srmr") +
+  scale_y_continuous(limits = c(0.0, 0.15)) +
+  geom_hline(yintercept=0.1, linetype="dashed", size= 0.3) +
+  theme_minimal()
+  
+```
+  
 - Lastly, all 
 
 ```{r}
