@@ -65,153 +65,167 @@ dsm5Fac_Con <- '
 ```
 
 ```{r}
-iterateCFA <- function(data, n_itr, filter, sample_size=500) {
-  
- # n_itr = 100 # set number of iterations
-  results_con = matrix(nrow = n_itr, ncol = 6)#[1:n_itr, 6]
-  # set filter (here we take all with freq lower than 10)
-  if (filter=='>') {
-    print('More than')
-    dataN_Con <- filter(data, freq > 10)  
-  } else {
-    print ('Less than')
-    dataN_Con <- filter(data, freq <= 10)  
-  }
-  
+model_Factor <- dsm5Fac_Con
+
+iterateCFA <- function(data, n_itr, sample_size, freqCUT) {
+  results_top = matrix(nrow = n_itr, ncol = 7)
+  results_low = matrix(nrow = n_itr, ncol = 7)
+  RES <- list()
   for (i in 1:n_itr) {
-    # filter and sample data
-    dfSamp <- sample_n(dataN_Con, sample_size) 
-    pcl5Model <- cfa(dsm5Fac_Con, data = dfSamp[,1:20], estimator = "WLSMV")
-    results_con[i,] <- fitMeasures(pcl5Model, c("chisq","df","pvalue","srmr","cfi","rmsea"))
+    dfSamp <- slice_sample(data, n = sample_size) 
+    dataSAMP_top <- filter(dfSamp, freq > freqCUT)
+    dataSAMP_low  <- filter(dfSamp, freq <= freqCUT)  
+    factor_top <- cfa(model_Factor, data = dataSAMP_top[,4:19], estimator = "WLSMV")
+    factor_low <- cfa(model_Factor, data = dataSAMP_low[,4:19], estimator = "WLSMV")
+    results_top[i,1:6] <- fitMeasures(factor_top, c("chisq","df","pvalue","srmr","cfi","rmsea"))
+    results_low[i,1:6] <- fitMeasures(factor_low, c("chisq","df","pvalue","srmr","cfi","rmsea"))
+    results_top[i,7] <- nrow(dataSAMP_top) 
+    results_low[i,7] <- nrow(dataSAMP_low) 
+    }
+  RES$results_top_df <- data.frame(chisq = results_top[,1], df = results_top[,2], pvalue = results_top[,3], 
+                            srmr = results_top[,4], cfi = results_top[,5], rmsea = results_top[,6], subsamplesize = results_top[,7])
+  RES$results_low_df <- data.frame(chisq = results_low[,1], df = results_low[,2], pvalue = results_low[,3], 
+                              srmr = results_low[,4], cfi = results_low[,5], rmsea = results_low[,6], subsamplesize = results_low[,7])
+  return(RES)
     
   }
-  # create a dataframe from the matrix
-  results <- data.frame(chisq = results_con[,1], df = results_con[,2],
-                                               pvalue = results_con[,3], srmr = results_con[,4],
-                                               cfi = results_con[,5], rmsea = results_con[,6])
-  return(results)
-}
+  
+  
 ```
-
-```{r}
-conBigger10 <- iterateCFA(dataxCon, n_itr = 100, filter = '>', sample_size = 300) # failing
-MASS::truehist(conBigger10$cfi, xlab = "CFI of all that higher than 10")
-# now lower than ten
-
-conSmaller10 <- iterateCFA(dataxCon, n_itr = 100, filter = '<', sample_size = 300)
-MASS::truehist(conSmaller10$cfi, xlab = "CFI of all that lower than 10")
-summary(conSmaller10)
-summary(conBigger10)
-```
-
-
-- The most frequent fits better.
-- Lets test the effect of sample size on fitting (i.e. how much will be enough when we sampe most frequent and when we sample less).
-
 ### Sample size effects
 
 ```{r}
-# most frequent
-# vector from sample size of 50 to 1000 in steps of 50
-size_n <- seq(200,2000,100)
-nitr <- 1000
-CFI <- c()
-CFI_sd <- c()
-rmsea <- c()
-rmsea_sd <- c()
-p <- c()
-p_sd <- c()
-srmr <- c()
-srmr_sd <- c()
 
+size_top <- c()
+size_low <- c()
+size_top_sd <- c()
+size_low_sd <- c()
+
+CFI_TOP <- c()
+CFI_sd_TOP <- c()
+CFI_LOW <- c()
+CFI_sd_LOW <- c()
+
+rmsea_TOP <- c()
+rmsea_sd_TOP <- c()
+rmsea_LOW <- c()
+rmsea_sd_LOW <- c()
+
+p_TOP <- c()
+p_sd_TOP <- c()
+p_LOW <- c()
+p_sd_LOW <- c()
+
+srmr_TOP <- c()
+srmr_sd_TOP <- c()
+srmr_LOW <- c()
+srmr_sd_LOW <- c()
+
+FinRES <- list()
+
+
+### Set dataset for loops
+datax <- dataFREQ <- datax #last equals to your dataset
+
+# Determine frequency for splits
+Splits <- c()
+freq_2080 <- dataFREQ %>% 
+  arrange(freq) %>% 
+  slice_tail(prop = 0.2)
+Splits[1] <- min(freq_2080$freq)
+
+freq_5050 <- dataFREQ %>% 
+  arrange(freq) %>% 
+  slice_tail(prop = 0.5)
+Splits[2] <- min(freq_5050$freq)
+
+freq_8020 <- dataFREQ %>% 
+  arrange(freq) %>% 
+  slice_tail(prop = 0.8)
+Splits[3] <- min(freq_8020$freq)
+
+# set parameters
+size_n <- c(250, 500, 750, 1000, 1500, 2000, 5000, 10000)
+nitr <- 500
+
+# Run loops
 for (i in 1:length(size_n)){
-  print('sample size {size_n}')
-  conBigger10 <- iterateCFA(datax, n_itr = nitr, filter = '>', sample_size = size_n[i]) # failing
-  CFI[i] <- median(conBigger10$cfi)
-  CFI_sd[i] <- sd(conBigger10$cfi)
-  rmsea[i] <- median(conBigger10$rmsea)
-  rmsea_sd[i] <- sd(conBigger10$rmsea)
-  p[i] <- median(conBigger10$p)
-  p_sd[i] <- sd(conBigger10$p)
-  srmr[i] <- median(conBigger10$srmr)
-  srmr_sd[i] <- sd(conBigger10$srmr)
-}
+    test <- iterateCFA(datax, n_itr = nitr, freqCUT = Splits[2], sample_size = size_n[i])
+    
+    size_top[i] <- median(test$results_top_df$subsamplesize)
+    size_top_sd[i] <- sd(test$results_top_df$subsamplesize)
+    size_low[i] <- median(test$results_low_df$subsamplesize)
+    size_low_sd[i] <- sd(test$results_low_df$subsamplesize)
+    
+    CFI_TOP[i] <- median(test$results_top_df$cfi)
+    CFI_sd_TOP[i] <- sd(test$results_top_df$cfi)
+    CFI_LOW[i] <- median(test$results_low_df$cfi)
+    CFI_sd_LOW [i] <- sd(test$results_low_df$cfi)
+  
+    rmsea_TOP[i] <- median(test$results_top_df$rmsea)
+    rmsea_sd_TOP[i] <- sd(test$results_top_df$rmsea)
+    rmsea_LOW[i] <- median(test$results_low_df$rmsea)
+    rmsea_sd_LOW[i] <- sd(test$results_low_df$rmsea)
+    
+    p_TOP[i] <- median(test$results_top_df$p)
+    p_sd_TOP[i] <- sd(test$results_top_df$p)
+    p_LOW[i] <- median(test$results_low_df$p)
+    p_sd_LOW[i] <- sd(test$results_low_df$p)
+    
+    srmr_TOP[i] <- median(test$results_top_df$srmr)
+    srmr_sd_TOP[i] <- sd(test$results_top_df$srmr)
+    srmr_LOW[i] <- median(test$results_low_df$srmr)
+    srmr_sd_LOW[i] <- sd(test$results_low_df$srmr)
+    }   
+d_top <- data.frame(size_n, size_top, size_top_sd,
+                      CFI_TOP, CFI_sd_TOP,
+                      rmsea_TOP,rmsea_sd_TOP,
+                      p_TOP, p_sd_TOP,
+                      srmr_TOP,srmr_sd_TOP)
+  
+d_low <- data.frame(size_n, size_low, size_low_sd,
+                    CFI_LOW, CFI_sd_LOW,
+                    rmsea_LOW, rmsea_sd_LOW, 
+                    p_LOW, p_sd_LOW, 
+                    srmr_LOW, srmr_sd_LOW)
+  
+d_top$group <- c("top")
+d_low$group <- c("low ")
+colnames(d_low) <- colnames(d_top)
+dx <- rbind(d_top, d_low)
 
-d_above <- data.frame(CFI, CFI_sd, rmsea, rmsea_sd, p, p_sd, srmr, srmr_sd, size_n)
 ```
 
 ```{r}
-# - Do the same with the lower tail of the distribution:
-
-CFI_1 <- c()
-CFI_sd_1 <- c()
-rmsea_1 <- c()
-rmsea_sd_1 <- c()
-p_1 <- c()
-p_sd_1 <- c()
-srmr_1 <- c()
-srmr_sd_1 <- c()
-
-for (i in 1:length(size_n)){
-  print('sample size {size_n}')
-  conBigger10 <- iterateCFA(datax, n_itr = nitr, filter = '<', sample_size = size_n[i]) # failing
-  CFI_1[i] <- median(conBigger10$cfi)
-  CFI_sd_1[i] <- sd(conBigger10$cfi)
-  rmsea_1[i] <- median(conBigger10$rmsea)
-  rmsea_sd_1[i] <- sd(conBigger10$rmsea)
-  p_1[i] <- median(conBigger10$p)
-  p_sd_1[i] <- sd(conBigger10$p)
-  srmr_1[i] <- median(conBigger10$srmr)
-  srmr_sd_1[i] <- sd(conBigger10$srmr)
-}
-d_below <- data.frame(CFI_1, CFI_sd_1, rmsea_1, rmsea_sd_1, p_1, p_sd_1, srmr_1, srmr_sd_1, size_n)
-```
-
-```{r}
-# Prepare plots
-d_above$group <- c("1")
-d_below$group <- c("2")
-colnames(d_below) <- colnames(d_above)
-dx <- rbind(d_above, d_below)
-
 #Plot CFI
-ggplot(data=dx, aes(y=CFI, x=size_n, colour=group, group=group)) +
+ggplot(data=dx, aes(y=CFI_TOP, x=size_n, colour=group, group=group)) +
   geom_point(size = 1.5) + 
   geom_line() +
-  geom_errorbar(aes(ymin=CFI-CFI_sd, ymax=CFI+CFI_sd), width=.5, colour="black") +
+  geom_errorbar(aes(ymin=CFI_TOP-CFI_sd_TOP, ymax=CFI_TOP+CFI_sd_TOP), width=.5, colour="black") +
   xlab("Sample size") +
   ylab("CFI") +
-  scale_y_continuous(limits = c(0.90, 1.0)) +
+  scale_y_continuous(limits = c(0.80, 1.0)) +
   geom_hline(yintercept=0.95, linetype="dashed", size= 0.3) +
   theme_minimal()
 
 
 # Plot RMSEA
-ggplot(data=dx, aes(y=rmsea, x=size_n, colour=group, group=group)) +
+ggplot(data=dx, aes(y=rmsea_TOP, x=size_n, colour=group, group=group)) +
   geom_point(size = 1.5) + 
   geom_line() +
-  geom_errorbar(aes(ymin=rmsea-rmsea_sd, ymax=rmsea+rmsea_sd), width=.5, colour="black") +
+  geom_errorbar(aes(ymin=rmsea_TOP-rmsea_sd_TOP, ymax=rmsea_TOP+rmsea_sd_TOP), width=.5, colour="black") +
   xlab("Sample size") +
   ylab("rmsea") +
-  scale_y_continuous(limits = c(0.0, 0.06)) +
+  scale_y_continuous(limits = c(0.0, 0.15)) +
   geom_hline(yintercept=0.05, linetype="dashed", size= 0.3) +
-  theme_minimal()
-
-# Plot p-value
-ggplot(data=dx, aes(y=p, x=size_n, colour=group, group=group)) +
-  geom_point(size = 1.5) + 
-  geom_line() +
-  geom_errorbar(aes(ymin=p-p_sd, ymax=p+p_sd), width=.5, colour="black") +
-  xlab("Sample size") +
-  ylab("p-value") +
-  scale_y_continuous(limits = c(0.0, 0.1)) +
+  geom_hline(yintercept=0.08, linetype="dashed", size= 0.3) +
   theme_minimal()
 
 # Plot SRMR
-ggplot(data=dx, aes(y=srmr, x=size_n, colour=group, group=group)) +
+ggplot(data=dx, aes(y=srmr_TOP, x=size_n, colour=group, group=group)) +
   geom_point(size = 1.5) + 
   geom_line() +
-  geom_errorbar(aes(ymin=srmr-srmr_sd, ymax=srmr+srmr_sd), width=.5, colour="black") +
+  geom_errorbar(aes(ymin=srmr_TOP-srmr_sd_TOP, ymax=srmr_TOP+srmr_sd_TOP), width=.5, colour="black") +
   xlab("Sample size") +
   ylab("srmr") +
   scale_y_continuous(limits = c(0.0, 0.15)) +
@@ -219,27 +233,110 @@ ggplot(data=dx, aes(y=srmr, x=size_n, colour=group, group=group)) +
   theme_minimal()
   
 ```
-  
-- Lastly, all 
 
-```{r}
-res2 <- c()
-results_con <-  matrix(nrow = 30, ncol = 6)
-for (i in 1:length(size_n)){
- # print('sample size {size_n}')
-  for (n in 1:30){
-    dfSamp <- sample_n(dfPCL5, size_n[i]) 
-    pcl5Model <- cfa(dsm5Fac_Con, data = dfSamp[,1:20], estimator = "WLSMV")
-    results_con[n,] <- fitMeasures(pcl5Model, c("chisq","df","pvalue","srmr","cfi","rmsea"))
-    
+### 5. EFA 
+
+``{r}
+#Installing the Psych package and loading it
+install.packages("psych")
+library(psych)
+iterateEFA <- function(data, n_itr, sample_size, freqCUT) {
+  results_top = matrix(nrow = n_itr, ncol = 2)
+  results_low = matrix(nrow = n_itr, ncol = 2)
+  RES_EFA <- list()
+  for (i in 1:n_itr) {
+    dfSamp <- slice_sample(data, n = sample_size) 
+    dataSAMP_top <- filter(dfSamp, freq > freqCUT)
+    dataSAMP_low  <- filter(dfSamp, freq <= freqCUT)  
+    dataSAMP_top_cor <- cor(dataSAMP_top[,4:19])
+    dataSAMP_low_cor <- cor(dataSAMP_low[,4:19])
+    results_top[i,2] <- nrow(dataSAMP_top) 
+    results_low[i,2] <- nrow(dataSAMP_low) 
+    items.parallel <- fa.parallel(dataSAMP_top_cor, fa = "fa", n.obs = nrow(dataSAMP_top_cor))
+    items.parallel <- fa.parallel(dataSAMP_low_cor, fa = "fa", n.obs = nrow(dataSAMP_top_cor))
+    results_top[i,1] <- items.parallel$nfact
+    results_low[i,1] <- items.parallel$nfact
   }
+  RES_EFA$results_top_df <- data.frame("Number Factors" = results_top[,1], "sample size" = results_top[,2])
+  RES_EFA$results_low_df <- data.frame("Number Factors" = results_low[,1], "sample size" = results_low[,2])
   
-  res2[i] <- median(results_con[,6])
+  return(RES_EFA)
+  
 }
 
-d2 <- data.frame(res2,size_n)
-ggplot(data=d2, aes(y=res2, x=size_n)) + geom_jitter() + geom_smooth() +  xlab("rmsea") + theme_minimal()
+
 ```
 
+```{r}
+### Set dataset for loops
+datax <- dataFREQ <- datax #last equals to your dataset
 
+# Determine frequency for splits
+Splits <- c()
+freq_2080 <- dataFREQ %>% 
+  arrange(freq) %>% 
+  slice_tail(prop = 0.2)
+Splits[1] <- min(freq_2080$freq)
 
+freq_5050 <- dataFREQ %>% 
+  arrange(freq) %>% 
+  slice_tail(prop = 0.5)
+Splits[2] <- min(freq_5050$freq)
+
+freq_8020 <- dataFREQ %>% 
+  arrange(freq) %>% 
+  slice_tail(prop = 0.8)
+Splits[3] <- min(freq_8020$freq)
+
+size_n <- c(100, 250, 500, 750, 1000, 1500, 2000, 3000, 30000)
+n_itr <- 300
+
+numberfact_top <- c()
+numberfact_sd_top <- c()
+size_top <- c()
+size_top_sd <- c()
+numberfact_low <- c()
+numberfact_sd_low <- c()
+size_low <- c()
+size_low_sd <- c()
+
+for (i in 1:length(size_n)){
+  EFA_test <- iterateEFA(datax, n_itr, freqCUT = Splits[2], sample_size = size_n[i]) 
+  
+  numberfact_top[i] <- median(EFA_test$results_top_df$Number.Factors)
+  numberfact_sd_top[i] <- sd(EFA_test$results_top_df$Number.Factors)
+  
+  size_top[i] <- median(EFA_test$results_top_df$sample.size)
+  size_top_sd[i] <- sd(EFA_test$results_top_df$sample.size)
+  
+  numberfact_low[i] <- median(EFA_test$results_low_df$Number.Factors)
+  numberfact_sd_low[i] <- sd(EFA_test$results_low_df$Number.Factors)
+  
+  size_low[i] <- median(EFA_test$results_low_df$sample.size)
+  size_low_sd[i] <- sd(EFA_test$results_low_df$sample.size)
+}
+
+d_EFA_above <- data.frame(size_n, size_top, size_top_sd,
+                    numberfact_top, numberfact_sd_top)
+
+d_EFA_below <- data.frame(size_n, size_low, size_low_sd,
+                    numberfact_low, numberfact_sd_low)
+
+d_EFA_above$group <- c("top")
+d_EFA_below$group <- c("low")
+colnames(d_EFA_below) <- colnames(d_EFA_above)
+dx_EFA <- rbind(d_EFA_above, d_EFA_below)
+```
+
+```{r}
+
+# Plot factors
+ggplot(data=dx_EFA, aes(y=numberfact_top, x=size_n, colour=group, group=group)) +
+  geom_errorbar(aes(ymin=numberfact_top-numberfact_sd_top, ymax=numberfact_top+numberfact_sd_top), colour="black") +
+  geom_point(size = 1.5) + 
+  geom_line() +
+  xlab("Sample size") +
+  ylab("Median number of factors") +
+  scale_y_continuous(limits = c(0.0, 6)) +
+  theme_minimal()
+```
