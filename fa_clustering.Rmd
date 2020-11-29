@@ -73,10 +73,10 @@ iterateCFA <- function(data, n_itr, sample_size, freqCUT) {
   RES <- list()
   for (i in 1:n_itr) {
     dfSamp <- slice_sample(data, n = sample_size) 
-    dataSAMP_top <- filter(dfSamp, freq > freqCUT)
-    dataSAMP_low  <- filter(dfSamp, freq <= freqCUT)  
-    factor_top <- cfa(model_Factor, data = dataSAMP_top[,4:19], estimator = "WLSMV")
-    factor_low <- cfa(model_Factor, data = dataSAMP_low[,4:19], estimator = "WLSMV")
+    dataSAMP_top <- filter(dfSamp, freq >= freqCUT)
+    dataSAMP_low  <- filter(dfSamp, freq < freqCUT)  
+    factor_top <- cfa(model_Factor, data = dataSAMP_top[,1:20], estimator = "WLSMV")
+    factor_low <- cfa(model_Factor, data = dataSAMP_low[,1:20], estimator = "WLSMV")
     results_top[i,1:6] <- fitMeasures(factor_top, c("chisq","df","pvalue","srmr","cfi","rmsea"))
     results_low[i,1:6] <- fitMeasures(factor_low, c("chisq","df","pvalue","srmr","cfi","rmsea"))
     results_top[i,7] <- nrow(dataSAMP_top) 
@@ -125,7 +125,7 @@ FinRES <- list()
 
 
 ### Set dataset for loops
-datax <- dataFREQ <- datax #last equals to your dataset
+datax <- dataFREQ <- dataxCon #last equals to your dataset
 
 # Determine frequency for splits
 Splits <- c()
@@ -145,11 +145,12 @@ freq_8020 <- dataFREQ %>%
 Splits[3] <- min(freq_8020$freq)
 
 # set parameters
-size_n <- c(250, 500, 750, 1000, 1500, 2000, 5000, 10000)
-nitr <- 500
+size_n <- c(400, 750, 1000, 1500, 2000, 5000, 10000)
+nitr <- 100
 
 # Run loops
 for (i in 1:length(size_n)){
+    print(size_n[i]) # print size
     test <- iterateCFA(datax, n_itr = nitr, freqCUT = Splits[2], sample_size = size_n[i])
     
     size_top[i] <- median(test$results_top_df$subsamplesize)
@@ -236,9 +237,9 @@ ggplot(data=dx, aes(y=srmr_TOP, x=size_n, colour=group, group=group)) +
 
 ### 5. EFA 
 
-``{r}
+```{r}
 #Installing the Psych package and loading it
-install.packages("psych")
+#install.packages("psych")
 library(psych)
 iterateEFA <- function(data, n_itr, sample_size, freqCUT) {
   results_top = matrix(nrow = n_itr, ncol = 2)
@@ -246,10 +247,10 @@ iterateEFA <- function(data, n_itr, sample_size, freqCUT) {
   RES_EFA <- list()
   for (i in 1:n_itr) {
     dfSamp <- slice_sample(data, n = sample_size) 
-    dataSAMP_top <- filter(dfSamp, freq > freqCUT)
-    dataSAMP_low  <- filter(dfSamp, freq <= freqCUT)  
-    dataSAMP_top_cor <- cor(dataSAMP_top[,4:19])
-    dataSAMP_low_cor <- cor(dataSAMP_low[,4:19])
+    dataSAMP_top <- filter(dfSamp, freq >= freqCUT)
+    dataSAMP_low  <- filter(dfSamp, freq < freqCUT)  
+    dataSAMP_top_cor <- cor(dataSAMP_top[,1:20])
+    dataSAMP_low_cor <- cor(dataSAMP_low[,1:20])
     results_top[i,2] <- nrow(dataSAMP_top) 
     results_low[i,2] <- nrow(dataSAMP_low) 
     items.parallel <- fa.parallel(dataSAMP_top_cor, fa = "fa", n.obs = nrow(dataSAMP_top_cor))
@@ -269,7 +270,7 @@ iterateEFA <- function(data, n_itr, sample_size, freqCUT) {
 
 ```{r}
 ### Set dataset for loops
-datax <- dataFREQ <- datax #last equals to your dataset
+datax <- dataFREQ <- dataxCon #last equals to your dataset
 
 # Determine frequency for splits
 Splits <- c()
@@ -289,7 +290,7 @@ freq_8020 <- dataFREQ %>%
 Splits[3] <- min(freq_8020$freq)
 
 size_n <- c(100, 250, 500, 750, 1000, 1500, 2000, 3000, 30000)
-n_itr <- 300
+n_itr <- 100
 
 numberfact_top <- c()
 numberfact_sd_top <- c()
