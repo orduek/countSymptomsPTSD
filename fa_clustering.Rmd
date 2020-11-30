@@ -266,22 +266,21 @@ dsm5Fac_Con <- '
       Hyper =~ PCLN15 + PCLN16 + PCLN17 + PCLN18 + PCLN19 + PCLN20'
 
 # now we do the 7 factors hybrid model - to test that also
-factor7 <- 
-  '
+factor7 <- '
       Int =~ PCLN01 + PCLN02 + PCLN03 + PCLN04 + PCLN05
       Av =~ PCLN06 + PCLN07
-      NA =~ PCLN08 + PCLN09 + PCLN10 + PCLN11
-      AN =~ PCLN12 + PCLN13 + PCLN14 
-      EB =~ PCLN15 + PCLN16
-      AA =~ PCLN17 + PCLN18
-      DA =~ PCLN19 + PCLN20'
+      Na =~ PCLN08 + PCLN09 + PCLN10 + PCLN11
+      An =~ PCLN12 + PCLN13 + PCLN14 
+      Eb =~ PCLN15 + PCLN16
+      Aa =~ PCLN17 + PCLN18
+      Da =~ PCLN19 + PCLN20'
 
 ```
 
 ```{r, include = FALSE}
 model_Factor <- dsm5Fac_Con
 
-iterateCFA <- function(data, n_itr, sample_size, freqCUT) {
+iterateCFA <- function(data, model_Factor,  n_itr, sample_size, freqCUT) {
   results_top = matrix(nrow = n_itr, ncol = 7)
   results_low = matrix(nrow = n_itr, ncol = 7)
   RES <- list()
@@ -368,7 +367,7 @@ nitr <- 50
 ```{r, include = FALSE}
 for (i in 1:length(size_n)){
     print(size_n[i]) # print size
-    test <- iterateCFA(datax, n_itr = nitr, freqCUT = Splits[1], sample_size = size_n[i])
+    test <- iterateCFA(datax,model_Factor, n_itr = nitr, freqCUT = Splits[1], sample_size = size_n[i])
     
     size_top[i] <- median(test$results_top_df$subsamplesize)
     size_top_sd[i] <- sd(test$results_top_df$subsamplesize)
@@ -464,7 +463,203 @@ Next median split.
 <br />
 ```{r, include = FALSE}
 for (i in 1:length(size_n)){
-    test <- iterateCFA(datax, n_itr = nitr, freqCUT = Splits[3], sample_size = size_n[i])
+    test <- iterateCFA(datax,model_Factor, n_itr = nitr, freqCUT = Splits[2], sample_size = size_n[i])
+    
+    size_top[i] <- median(test$results_top_df$subsamplesize)
+    size_top_sd[i] <- sd(test$results_top_df$subsamplesize)
+    size_low[i] <- median(test$results_low_df$subsamplesize)
+    size_low_sd[i] <- sd(test$results_low_df$subsamplesize)
+    
+    CFI_TOP[i] <- median(test$results_top_df$cfi)
+    CFI_sd_TOP[i] <- sd(test$results_top_df$cfi)
+    CFI_LOW[i] <- median(test$results_low_df$cfi)
+    CFI_sd_LOW [i] <- sd(test$results_low_df$cfi)
+  
+    rmsea_TOP[i] <- median(test$results_top_df$rmsea)
+    rmsea_sd_TOP[i] <- sd(test$results_top_df$rmsea)
+    rmsea_LOW[i] <- median(test$results_low_df$rmsea)
+    rmsea_sd_LOW[i] <- sd(test$results_low_df$rmsea)
+    
+    p_TOP[i] <- median(test$results_top_df$p)
+    p_sd_TOP[i] <- sd(test$results_top_df$p)
+    p_LOW[i] <- median(test$results_low_df$p)
+    p_sd_LOW[i] <- sd(test$results_low_df$p)
+    
+    srmr_TOP[i] <- median(test$results_top_df$srmr)
+    srmr_sd_TOP[i] <- sd(test$results_top_df$srmr)
+    srmr_LOW[i] <- median(test$results_low_df$srmr)
+    srmr_sd_LOW[i] <- sd(test$results_low_df$srmr)
+    }   
+d_top <- data.frame(size_n, size_top, size_top_sd,
+                      CFI_TOP, CFI_sd_TOP,
+                      rmsea_TOP,rmsea_sd_TOP,
+                      p_TOP, p_sd_TOP,
+                      srmr_TOP,srmr_sd_TOP)
+  
+d_low <- data.frame(size_n, size_low, size_low_sd,
+                    CFI_LOW, CFI_sd_LOW,
+                    rmsea_LOW, rmsea_sd_LOW, 
+                    p_LOW, p_sd_LOW, 
+                    srmr_LOW, srmr_sd_LOW)
+  
+d_top$group <- c("top")
+d_low$group <- c("low ")
+colnames(d_low) <- colnames(d_top)
+dx <- rbind(d_top, d_low)
+
+```
+<br />
+Next we plot different fit statistics for each sample size. First the CFI.
+<br />
+```{r, echo = FALSE}
+ggplot(data=dx, aes(y=CFI_TOP, x=size_n, colour=group, group=group)) +
+  geom_point(size = 1.5) + 
+  geom_line() +
+  geom_errorbar(aes(ymin=CFI_TOP-CFI_sd_TOP, ymax=CFI_TOP+CFI_sd_TOP), width=.5, colour="black") +
+  xlab("Sample size") +
+  ylab("CFI") +
+  ggtitle("Fit median split") +
+  scale_y_continuous(limits = c(0.80, 1.0)) +
+  geom_hline(yintercept=0.95, linetype="dashed", size= 0.3) +
+  theme_minimal()
+```
+
+<br />
+Next RMSEA
+<br />
+```{r, echo = FALSE}
+ggplot(data=dx, aes(y=rmsea_TOP, x=size_n, colour=group, group=group)) +
+  geom_point(size = 1.5) + 
+  geom_line() +
+  geom_errorbar(aes(ymin=rmsea_TOP-rmsea_sd_TOP, ymax=rmsea_TOP+rmsea_sd_TOP), width=.5, colour="black") +
+  xlab("Sample size") +
+  ylab("rmsea") +
+  ggtitle("Fit of median split") +
+  scale_y_continuous(limits = c(0.0, 0.15)) +
+  geom_hline(yintercept=0.05, linetype="dashed", size= 0.3) +
+  geom_hline(yintercept=0.08, linetype="dashed", size= 0.3) +
+  theme_minimal()
+```
+<br />
+Last SRMR.
+<br />
+```{r, echo = FALSE}
+ggplot(data=dx, aes(y=srmr_TOP, x=size_n, colour=group, group=group)) +
+  geom_point(size = 1.5) + 
+  geom_line() +
+  geom_errorbar(aes(ymin=srmr_TOP-srmr_sd_TOP, ymax=srmr_TOP+srmr_sd_TOP), width=.5, colour="black") +
+  xlab("Sample size") +
+  ylab("srmr") +
+  ggtitle("Fit of median  split") +
+  scale_y_continuous(limits = c(0.0, 0.15)) +
+  geom_hline(yintercept=0.1, linetype="dashed", size= 0.3) +
+  theme_minimal()
+```
+
+<br />
+80% Low vs. 20% top
+<br />
+```{r, include = FALSE}
+for (i in 1:length(size_n)){
+    test <- iterateCFA(datax,model_Factor, n_itr = nitr, freqCUT = Splits[3], sample_size = size_n[i])
+    
+    size_top[i] <- median(test$results_top_df$subsamplesize)
+    size_top_sd[i] <- sd(test$results_top_df$subsamplesize)
+    size_low[i] <- median(test$results_low_df$subsamplesize)
+    size_low_sd[i] <- sd(test$results_low_df$subsamplesize)
+    
+    CFI_TOP[i] <- median(test$results_top_df$cfi)
+    CFI_sd_TOP[i] <- sd(test$results_top_df$cfi)
+    CFI_LOW[i] <- median(test$results_low_df$cfi)
+    CFI_sd_LOW [i] <- sd(test$results_low_df$cfi)
+  
+    rmsea_TOP[i] <- median(test$results_top_df$rmsea)
+    rmsea_sd_TOP[i] <- sd(test$results_top_df$rmsea)
+    rmsea_LOW[i] <- median(test$results_low_df$rmsea)
+    rmsea_sd_LOW[i] <- sd(test$results_low_df$rmsea)
+    
+    p_TOP[i] <- median(test$results_top_df$p)
+    p_sd_TOP[i] <- sd(test$results_top_df$p)
+    p_LOW[i] <- median(test$results_low_df$p)
+    p_sd_LOW[i] <- sd(test$results_low_df$p)
+    
+    srmr_TOP[i] <- median(test$results_top_df$srmr)
+    srmr_sd_TOP[i] <- sd(test$results_top_df$srmr)
+    srmr_LOW[i] <- median(test$results_low_df$srmr)
+    srmr_sd_LOW[i] <- sd(test$results_low_df$srmr)
+    }   
+d_top <- data.frame(size_n, size_top, size_top_sd,
+                      CFI_TOP, CFI_sd_TOP,
+                      rmsea_TOP,rmsea_sd_TOP,
+                      p_TOP, p_sd_TOP,
+                      srmr_TOP,srmr_sd_TOP)
+  
+d_low <- data.frame(size_n, size_low, size_low_sd,
+                    CFI_LOW, CFI_sd_LOW,
+                    rmsea_LOW, rmsea_sd_LOW, 
+                    p_LOW, p_sd_LOW, 
+                    srmr_LOW, srmr_sd_LOW)
+  
+d_top$group <- c("top")
+d_low$group <- c("low ")
+colnames(d_low) <- colnames(d_top)
+dx <- rbind(d_top, d_low)
+
+```
+<br />
+Next we plot different fit statistics for each sample size. First the CFI.
+<br />
+```{r, echo = FALSE}
+ggplot(data=dx, aes(y=CFI_TOP, x=size_n, colour=group, group=group)) +
+  geom_point(size = 1.5) + 
+  geom_line() +
+  geom_errorbar(aes(ymin=CFI_TOP-CFI_sd_TOP, ymax=CFI_TOP+CFI_sd_TOP), width=.5, colour="black") +
+  xlab("Sample size") +
+  ylab("CFI") +
+  ggtitle("Fit 80% low vs. 20% top") +
+  scale_y_continuous(limits = c(0.80, 1.0)) +
+  geom_hline(yintercept=0.95, linetype="dashed", size= 0.3) +
+  theme_minimal()
+```
+
+<br />
+Next RMSEA
+<br />
+```{r, echo = FALSE}
+ggplot(data=dx, aes(y=rmsea_TOP, x=size_n, colour=group, group=group)) +
+  geom_point(size = 1.5) + 
+  geom_line() +
+  geom_errorbar(aes(ymin=rmsea_TOP-rmsea_sd_TOP, ymax=rmsea_TOP+rmsea_sd_TOP), width=.5, colour="black") +
+  xlab("Sample size") +
+  ylab("rmsea") +
+  ggtitle("Fit 80% low vs. 20% top") +
+  scale_y_continuous(limits = c(0.0, 0.15)) +
+  geom_hline(yintercept=0.05, linetype="dashed", size= 0.3) +
+  geom_hline(yintercept=0.08, linetype="dashed", size= 0.3) +
+  theme_minimal()
+```
+<br />
+Last SRMR.
+<br />
+```{r, echo = FALSE}
+ggplot(data=dx, aes(y=srmr_TOP, x=size_n, colour=group, group=group)) +
+  geom_point(size = 1.5) + 
+  geom_line() +
+  geom_errorbar(aes(ymin=srmr_TOP-srmr_sd_TOP, ymax=srmr_TOP+srmr_sd_TOP), width=.5, colour="black") +
+  xlab("Sample size") +
+  ylab("srmr") +
+  ggtitle("Fit 80% low vs. 20% top") +
+  scale_y_continuous(limits = c(0.0, 0.15)) +
+  geom_hline(yintercept=0.1, linetype="dashed", size= 0.3) +
+  theme_minimal()
+```
+
+
+### Lets test the median split on the 7-factors hybrid model
+
+```{r, include = FALSE}
+for (i in 1:length(size_n)){
+    test <- iterateCFA(datax,factor7, n_itr = nitr, freqCUT = Splits[2], sample_size = size_n[i])
     
     size_top[i] <- median(test$results_top_df$subsamplesize)
     size_top_sd[i] <- sd(test$results_top_df$subsamplesize)
