@@ -1,0 +1,110 @@
+---
+title: "DSM-IV correlation with Depression"
+output:
+  html_document:
+    df_print: paged
+  html_notebook: default
+  pdf_document: default
+---
+
+## Correlation between PCL and PHQ9
+- Test the effect of profile frequency on the correlation
+
+```{r echo = FALSE, results='hide', message=FALSE, comment=FALSE, warning=FALSE}
+## load libraries
+require(tidyverse)
+require(lavaan)
+require(FactoMineR)
+# load specific functions
+source('utils.r') # load functions
+```
+
+```{r echo = FALSE}
+# load data set
+source('/home/or/Documents/va_data/readData.r')
+```
+
+
+```{r}
+# create specific dataframe
+id = 1:nrow(dfPCL4)
+dfPCL4_Binary <- tibble(id, dfPCL4[18:34])
+countFreq_pcl4 <- plyr::count(dfPCL4_Binary[,-1])
+```
+
+```{r}
+phqPCLDf <- dplyr::select(vaDatclean, PHQ1,PHQ2,PHQ3,PHQ4,PHQ5,PHQ6,PHQ7,PHQ8,PHQ9, PCL1, PCL2, PCL3, PCL4,
+                       PCL5, PCL6, PCL7, PCL8, PCL9, PCL10, PCL11, PCL12, PCL13, PCL14, PCL15, PCL16, PCL17)
+phqPCLDf <- na.omit(phqPCLDf)
+
+phqPCLDf$sumPHQ9 <- phqPCLDf$PHQ1 + phqPCLDf$PHQ2 + phqPCLDf$PHQ3 + phqPCLDf$PHQ4 + phqPCLDf$PHQ5 + phqPCLDf$PHQ6 + phqPCLDf$PHQ7 + phqPCLDf$PHQ8 + phqPCLDf$PHQ9
+
+phqPCLDf$sumPCL <- phqPCLDf$PCL1 +  phqPCLDf$PCL2 +  phqPCLDf$PCL3 +  phqPCLDf$PCL4 + phqPCLDf$PCL5 +  phqPCLDf$PCL6 + phqPCLDf$PCL7 +  phqPCLDf$PCL8 + phqPCLDf$PCL9 + phqPCLDf$PCL10 +  phqPCLDf$PCL11 + phqPCLDf$PCL12 +  phqPCLDf$PCL13 + phqPCLDf$PCL14 +  phqPCLDf$PCL15 + phqPCLDf$PCL16 + phqPCLDf$PCL17
+```
+
+- Correlation
+```{r}
+cor.test(phqPCLDf$sumPHQ9, phqPCLDf$sumPCL)
+# correlation of 0.38, p<0.005
+```
+
+## Binarization etc.
+
+```{r}
+dfBinar <- phqPCLDf
+# using PCL-4 recommended threshold is 3+ (not 2+ as in PCL5)
+for (i in 1:17){
+  nam = paste("PCL", i, sep = "")
+  pcl <- paste("PCLB", i, sep = "")
+  dfBinar[pcl] <- dplyr::case_when(dfBinar[nam]<=2 ~ 'NO', dfBinar[nam]>=3 ~ 'YES')
+  
+}
+```
+
+
+```{r}
+# create specific dataframe
+id = 1:nrow(dfBinar)
+dfPCL4_Binary <- tibble(id, dfBinar[29:45])
+countFreq_pcl4 <- plyr::count(dfPCL4_Binary[,-1])
+```
+
+```{r}
+# Create new data frame
+# join the two so we have frequency next to each individual
+datax <- dplyr::full_join(dfBinar, countFreq_pcl4, by = c("PCLB1" = "PCLB1", "PCLB2" = "PCLB2", "PCLB3" = "PCLB3", "PCLB4" = "PCLB4", "PCLB5" = "PCLB5", "PCLB6" = "PCLB6", "PCLB7" = "PCLB7", "PCLB8" = "PCLB8", "PCLB9" = "PCLB9", "PCLB10" = "PCLB10", "PCLB11" = "PCLB11", "PCLB12" = "PCLB12", 
+ "PCLB13" = "PCLB13", "PCLB14" = "PCLB14", "PCLB15" = "PCLB15", "PCLB16" = "PCLB16", "PCLB17" = "PCLB17"))
+```
+
+## Cut for frequencies
+
+```{r}
+dataFREQ <- datax
+freq_2080 <- dataFREQ %>% 
+  arrange(freq) %>% 
+  slice_tail(prop = 0.2)
+Splits[1] <- min(freq_2080$freq)
+
+freq_5050 <- dataFREQ %>% 
+  arrange(freq) %>% 
+  slice_tail(prop = 0.5)
+Splits[2] <- min(freq_5050$freq)
+
+freq_8020 <- dataFREQ %>% 
+  arrange(freq) %>% 
+  slice_tail(prop = 0.8)
+Splits[3] <- min(freq_8020$freq)
+
+# cut by media
+topFreq <- filter(datax, freq > Splits[3])
+lowFreq  <- filter(datax, freq <= Splits[3])
+
+cor.test(topFreq$sumPHQ9, topFreq$sumPCL) # 0.32 p<0.005
+
+cor.test(lowFreq$sumPHQ9, lowFreq$sumPCL) # 0.28 p<0.005
+```
+
+
+
+
+

@@ -21,8 +21,9 @@ require(tidyverse)
 require(ReIns)
 require("poweRlaw")
 require(lavaan)
-
-# load specific fucntions
+require(FactoMineR)
+require(factoextra)
+# load specific functions
 source('utils.r') # load functions
 ```
 
@@ -96,7 +97,7 @@ lines(m_pl, col = 2) # draw fitted line (color=red)
 * Use bootstrap to test significant level 
 
 ```{r, echo=FALSE}
-bs_p = bootstrap_p(m_pl, no_of_sims = 1000, threads = 10)
+bs_p = bootstrap_p(m_pl, no_of_sims = 2000, threads = 10)
 plot(bs_p)
 ```
 
@@ -215,7 +216,7 @@ for (i in 1:length(size_n)){
 }
 
 d <- data.frame(res,size_n)
-ggplot(data=d, aes(y=res, x=size_n)) + geom_jitter() + geom_smooth() + xlab("rmsea") + theme_minimal()
+ggplot(data=d, aes(y=res, x=size_n)) + geom_jitter() + geom_smooth() + ylab("rmsea") + xlab("Sample Size") + theme_minimal()
 ```
 
 - Do the same with the lower tail of the distribution:
@@ -228,7 +229,7 @@ for (i in 1:length(size_n)){
 }
 
 d1 <- data.frame(res1,size_n)
-ggplot(data=d1, aes(y=res1, x=size_n)) + geom_jitter() + geom_smooth() +  xlab("rmsea") + theme_minimal()
+ggplot(data=d1, aes(y=res1, x=size_n)) + geom_jitter() + geom_smooth() +  ylab("rmsea") +xlab("Sample Size")+ theme_minimal()
 ```
 
 - Lastly, all 
@@ -249,5 +250,67 @@ for (i in 1:length(size_n)){
 }
 
 d2 <- data.frame(res2,size_n)
-ggplot(data=d2, aes(y=res2, x=size_n)) + geom_jitter() + geom_smooth() +  xlab("rmsea") + theme_minimal()
+ggplot(data=d2, aes(y=res2, x=size_n)) + geom_jitter() + geom_smooth() +  xlab("Sample Size") + ylab("rmsea") + theme_minimal()
 ```
+
+## Priniciple Component analysis -
+- Without setting number of clusters
+
+```{r}
+# create correlation matrix
+dataCor <- cor(dfPCL5)
+fit <- princomp(dataCor, cor=TRUE)
+summary(fit) # print variance accounted for
+loadings(fit) # pc loadings
+plot(fit,type="lines") # scree plot
+fit$scores # the principal components
+biplot(fit)
+```
+
+```{r}
+# PCA Variable Factor Map
+fit2 <- PCA(dfPCL5) # graphs generated automatically
+get_eig(fit2)
+# Visualize eigenvalues/variances
+fviz_screeplot(fit2, addlabels = TRUE, ylim = c(0, 50))
+
+```
+
+```{r}
+# Control variable colors using their contributions
+fviz_pca_var(fit2, col.var="contrib",
+             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
+             repel = TRUE # Avoid text overlapping
+             )
+```
+```{r}
+# Contributions of variables to PC1
+fviz_contrib(fit2, choice = "var", axes = 1, top = 20)
+# Contributions of variables to PC2
+fviz_contrib(fit2, choice = "var", axes = 2, top = 20)
+```
+```{r}
+km.res <- kmeans(scale(dfPCL5), 4, nstart = 25)
+# 3. Visualize
+
+fviz_cluster(km.res, data = dfPCL5,
+             palette = c("#00AFBB","#2E9FDF", "#E7B800", "#FC4E07"),
+             ggtheme = theme_minimal(),
+             main = "Partitioning Clustering Plot"
+             )
+```
+```{r}
+res <- hcut(dfPCL5, k = 4, stand = TRUE)
+res_d <- as.dendrogram(res)
+plot(res_d)
+library("ape")
+plot(as.phylo(res), type = "unrooted", cex = 0.6,
+     no.margin = TRUE)
+# Visualize
+fviz_dend(res_d, rect = TRUE, cex = 0.5,
+          k_colors = c("#00AFBB","#2E9FDF", "#E7B800", "#FC4E07"))
+```
+
+
+
+
