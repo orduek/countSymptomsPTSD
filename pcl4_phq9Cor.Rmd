@@ -99,6 +99,10 @@ Splits[3] <- min(freq_8020$freq)
 topFreq <- filter(datax, freq > Splits[3])
 lowFreq  <- filter(datax, freq <= Splits[3])
 
+summary(topFreq$sumPCL)
+
+summary(lowFreq$sumPCL) #mean PCL is lower...
+
 cor.test(topFreq$sumPHQ9, topFreq$sumPCL) # 0.32 p<0.005
 
 cor.test(lowFreq$sumPHQ9, lowFreq$sumPCL) # 0.28 p<0.005
