@@ -96,8 +96,8 @@ freq_8020 <- dataFREQ %>%
 Splits[3] <- min(freq_8020$freq)
 
 # cut by media
-topFreq <- filter(datax, freq > Splits[3])
-lowFreq  <- filter(datax, freq <= Splits[3])
+topFreq <- filter(datax, freq > Splits[2])
+lowFreq  <- filter(datax, freq <= Splits[2])
 
 summary(topFreq$sumPCL)
 

@@ -40,6 +40,14 @@ dfPCL5 <- dfPCL5[,5:24]
 dfPCL5 <- na.omit(dfPCL5)
 ```
 
+```{r}
+# check date
+a = '01/01/1960'
+dt = as.Date(as.character(a), format = '%d/%m/%Y') + dfPCL5$SurveyGivenDateTime
+
+```
+
+
 ```{r echo=FALSE}
 dfPCL5_toBinarize <- dfPCL5
 for (i in 1:20){
@@ -68,10 +76,25 @@ countFreqBigPCL5 <- plyr::count(dfbigPCL5_Binary2)
 sum(countFreqBigPCL5$freq==1)
 # percentage
 sum(countFreqBigPCL5$freq==1) / nrow(countFreqBigPCL5)
+
+# less than 5
+sum(countFreqBigPCL5$freq<=5)
+# less than 50
+sum(countFreqBigPCL5$freq<=50)
+# more than 100
+sum(countFreqBigPCL5$freq>100)
 # count more than one less than ten
 sum(countFreqBigPCL5$freq<10) - sum(countFreqBigPCL5$freq==1)
 max(countFreqBigPCL5$freq)
 max(countFreqBigPCL5$freq) / nrow(dfbigPCL5_Binary2)
+
+# 
+freq5 <- countFreqBigPCL5[order(countFreqBigPCL5$freq, decreasing = TRUE),]
+freq5_top50 <- freq5[1:50,]
+sum(freq5_top50$freq)
+
+freq5_top10 <- freq5[1:10,]
+sum(freq5_top10$freq)
 ```
 
 - Plot the top 50 profiles
