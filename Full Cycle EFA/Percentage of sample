@@ -4,17 +4,16 @@
 #                                                                            #
 #                         Or Duek & Tobias Spiller                           # 
 #                                                                            #
-#                       Code Version 0.4 (16.01.2021)                        #
+#                       Code Version 1.0 (15.02.2021)                        #
 #                                                                            #
 #----------------------------------------------------------------------------#
 #                                                                            #
-#                           MBI: EFA / CFA                                   #
+#                             Full Cycle EFA / CFA                           #
 #									                                                           #
 ##############################################################################
 
 
 ###### Table of Contents #####################################################
-# Script 3: EFA / CFA
 #----- 1. Load libraries ----------------------------------------------------#
 #----- 2. Import and prepare data -------------------------------------------#
 #----- 3. Descriptive -------------------------------------------------------#
@@ -23,10 +22,17 @@
 #-----  5.1 Define factor structure -----------------------------------------#
 #-----  4.2 Function (data split + factor estimation) -----------------------#
 
+## General Notes ##
+# datax = dataframe script one with scores, binarized items and frequency profiles
+# data_train = 75% of datax
+# data_test = 25% of datax
+# datay_train = dataframe of items with ordinal ratings AND frequency of symptom profiles (redcued data_train)
+# dataz_train = dataframe of items with ordinal ratings WITHOUT frequency of symptom profiles (redcued data_train)
 
 ###### 1. Load Libraries #####################################################
 # Data handling + basic calculations
 if(!require("tidyverse")) install.packages("tidyverse")
+if(!require("rsample")) install.packages("rsample")
 if(!require("readxl")) install.packages("readxl")
 
 #Factor Analysis
@@ -36,78 +42,104 @@ if(!require("GPArotation")) install.packages("GPArotation")
 
 ###### 2. Import and prepare data ############################################
 
-# Prepare
+###### 2.1 Import
 # Create new data frame
-datax<- read_delim("Generated Data/Matched_freq_count.csv", 
+datax <- read_delim("Generated Data/Matched_freq_count.csv", 
                    ";", escape_double = FALSE, trim_ws = TRUE)
+
+###### 2.2 Training and testing data
+splits <- initial_split(datax, strata = freq) #25/75%
+
+data_train <- training(splits)
+data_test  <- testing(splits)
+
+# Create Splits based on % of sample
+Splits_percentage <- c()
+
+freq_2080 <- data_train %>% 
+  arrange(freq) %>% 
+  slice_tail(prop = 0.2)
+Splits_percentage[1] <- min(freq_2080$freq)
+
+freq_5050 <- data_train %>% 
+  arrange(freq) %>% 
+  slice_tail(prop = 0.5)
+Splits_percentage[2] <- min(freq_5050$freq)
+
+freq_8020 <- data_train %>% 
+  arrange(freq) %>% 
+  slice_tail(prop = 0.8)
+Splits_percentage[3] <- min(freq_8020$freq)
+
+# Create Splits based on frequency
+Splits_frequency <- c()
+Splits_frequency[1] <- 5
+Splits_frequency[2] <- 2
+Splits_frequency[3] <- 1
+
+Splits_percentage
+Splits_frequency
+
+# Prepare dataset for further analysis
+datay_train <- data_train %>% 
+  select(mbi_1:mbi_16, freq)
+
+dataz_train <- datay_train %>% 
+  select(- freq)
 
 ###### 3. Descriptive ########################################################
 
 summary(datax)
+summary(data_train)
+summary(data_test)
 
 ###### 4. EFA ################################################################
-###### 4.1 Create Data Splits 
-# Create splits
-dataFREQ <- datax
-
-Splits <- c()
-freq_2080 <- dataFREQ %>% 
-  arrange(freq) %>% 
-  slice_tail(prop = 0.2)
-Splits[1] <- min(freq_2080$freq)
-
-freq_5050 <- dataFREQ %>% 
-  arrange(freq) %>% 
-  slice_tail(prop = 0.5)
-Splits[2] <- min(freq_5050$freq)
-
-freq_8020 <- dataFREQ %>% 
-  arrange(freq) %>% 
-  slice_tail(prop = 0.8)
-Splits[3] <- min(freq_8020$freq)
-
-
 ###### 4.2 EFA  ####################################################################
 ###### 4.2.1 20/80 Split  ##########################################################
 # Define used sample
-CUT = Splits[1] # frequency
+CUT = Splits_percentage[1]
 
 # Prepare
-datax_top <- filter(datax, freq > CUT)
-datax_low <- filter(datax, freq <= CUT)
+data_top <- datay_train %>% 
+  filter(freq > CUT) %>% 
+  select(-freq)
 
-Share_top <- nrow(datax_top)/nrow(datax)
+data_low <- datay_train %>% 
+  filter(freq <= CUT) %>% 
+  select(-freq)
 
-datax_top_cor <- cor(datax_top[,4:19])
-datax_low_cor <- cor(datax_low[,4:19])
+Share_top <- nrow(data_top)/nrow(datay_train)
+
+data_top_cor <- cor(data_top)
+data_low_cor <- cor(data_low)
 
 # Check assumptions
-bar_top <- cortest.bartlett(datax_top_cor, n=nrow(datax_top))
-bar_low <- cortest.bartlett(datax_low_cor, n=nrow(datax_low))
+bar_top <- cortest.bartlett(data_top_cor, n=nrow(data_top))
+bar_low <- cortest.bartlett(data_low_cor, n=nrow(data_low))
 bar_top$p.value
 bar_low
 
-KMO_RES_top <- KMO(datax_top_cor)
-KMO_RES_low <- KMO(datax_low_cor)
+KMO_RES_top <- KMO(data_top_cor)
+KMO_RES_low <- KMO(data_low_cor)
 KMO_RES_top 
 KMO_RES_low
 
 # Estimate number of factors
-EFA_top <- fa.parallel(datax_top_cor, fa = "fa", n.obs = nrow(datax_top))
-EFA_low <- fa.parallel(datax_low_cor, fa = "fa", n.obs = nrow(datax_low))
+EFA_top <- fa.parallel(data_top_cor, fa = "fa", n.obs = nrow(data_top))
+EFA_low <- fa.parallel(data_low_cor, fa = "fa", n.obs = nrow(data_low))
 
 # Estimate factor models
-EFA_top_specific <- fa(datax_top_cor, 
+EFA_top_specific <- fa(data_top_cor, 
                        nfactors=EFA_top$nfact,
-                       n.obs = nrow(datax_top),
+                       n.obs = nrow(data_top),
                        SMC=TRUE,
                        fm = "ml",
                        rotate="promax",
                        max.iter=1000)
 
-EFA_low_specific <- fa(datax_low_cor, 
+EFA_low_specific <- fa(data_low_cor, 
                        nfactors=EFA_low$nfact,
-                       n.obs = nrow(datax_low),
+                       n.obs = nrow(data_low),
                        SMC=TRUE,
                        fm = "ml",
                        rotate="promax",
@@ -122,47 +154,52 @@ CUT1_t <- EFA_top_specific$loadings
 CUT1_l <- EFA_low_specific$loadings
 
 
-###### 4.2.2 Less than 5 endorsed ##################################################
+###### 4.2.2 Median Split  ##########################################################
 
 # Define used sample
-CUT = 5 # frequency
+CUT = Splits_percentage[2]
 
 # Prepare
-datax_top <- filter(datax, freq > CUT)
-datax_low <- filter(datax, freq <= CUT)
+data_top <- datay_train %>% 
+  filter(freq > CUT) %>% 
+  select(-freq)
 
-Share_top <- nrow(datax_top)/nrow(datax)
+data_low <- datay_train %>% 
+  filter(freq <= CUT) %>% 
+  select(-freq)
 
-datax_top_cor <- cor(datax_top[,4:19])
-datax_low_cor <- cor(datax_low[,4:19])
+Share_top <- nrow(data_top)/nrow(datay_train)
+
+data_top_cor <- cor(data_top)
+data_low_cor <- cor(data_low)
 
 # Check assumptions
-bar_top <- cortest.bartlett(datax_top_cor, n=nrow(datax_top))
-bar_low <- cortest.bartlett(datax_low_cor, n=nrow(datax_low))
+bar_top <- cortest.bartlett(data_top_cor, n=nrow(data_top))
+bar_low <- cortest.bartlett(data_low_cor, n=nrow(data_low))
 bar_top$p.value
 bar_low
 
-KMO_RES_top <- KMO(datax_top_cor)
-KMO_RES_low <- KMO(datax_low_cor)
+KMO_RES_top <- KMO(data_top_cor)
+KMO_RES_low <- KMO(data_low_cor)
 KMO_RES_top 
 KMO_RES_low
 
 # Estimate number of factors
-EFA_top <- fa.parallel(datax_top_cor, fa = "fa", n.obs = nrow(datax_top))
-EFA_low <- fa.parallel(datax_low_cor, fa = "fa", n.obs = nrow(datax_low))
+EFA_top <- fa.parallel(data_top_cor, fa = "fa", n.obs = nrow(data_top))
+EFA_low <- fa.parallel(data_low_cor, fa = "fa", n.obs = nrow(data_low))
 
 # Estimate factor models
-EFA_top_specific <- fa(datax_top_cor, 
+EFA_top_specific <- fa(data_top_cor, 
                        nfactors=EFA_top$nfact,
-                       n.obs = nrow(datax_top),
+                       n.obs = nrow(data_top),
                        SMC=TRUE,
                        fm = "ml",
                        rotate="promax",
                        max.iter=1000)
 
-EFA_low_specific <- fa(datax_low_cor, 
+EFA_low_specific <- fa(data_low_cor, 
                        nfactors=EFA_low$nfact,
-                       n.obs = nrow(datax_low),
+                       n.obs = nrow(data_low),
                        SMC=TRUE,
                        fm = "ml",
                        rotate="promax",
@@ -176,48 +213,51 @@ print(EFA_low_specific$loadings, cutoff = 0.3)
 CUT2_t <- EFA_top_specific$loadings
 CUT2_l <- EFA_low_specific$loadings
 
-
-###### 4.2.3 Only 1 endorsed  ##########################################################
-
+###### 4.2.3 80/20 Split  ##########################################################
 # Define used sample
-CUT = 1 # frequency
+CUT = Splits_percentage[3]
 
 # Prepare
-datax_top <- filter(datax, freq > CUT)
-datax_low <- filter(datax, freq <= CUT)
+data_top <- datay_train %>% 
+  filter(freq > CUT) %>% 
+  select(-freq)
 
-Share_top <- nrow(datax_top)/nrow(datax)
+data_low <- datay_train %>% 
+  filter(freq <= CUT) %>% 
+  select(-freq)
 
-datax_top_cor <- cor(datax_top[,4:19])
-datax_low_cor <- cor(datax_low[,4:19])
+Share_top <- nrow(data_top)/nrow(datay_train)
+
+data_top_cor <- cor(data_top)
+data_low_cor <- cor(data_low)
 
 # Check assumptions
-bar_top <- cortest.bartlett(datax_top_cor, n=nrow(datax_top))
-bar_low <- cortest.bartlett(datax_low_cor, n=nrow(datax_low))
+bar_top <- cortest.bartlett(data_top_cor, n=nrow(data_top))
+bar_low <- cortest.bartlett(data_low_cor, n=nrow(data_low))
 bar_top$p.value
 bar_low
 
-KMO_RES_top <- KMO(datax_top_cor)
-KMO_RES_low <- KMO(datax_low_cor)
+KMO_RES_top <- KMO(data_top_cor)
+KMO_RES_low <- KMO(data_low_cor)
 KMO_RES_top 
 KMO_RES_low
 
 # Estimate number of factors
-EFA_top <- fa.parallel(datax_top_cor, fa = "fa", n.obs = nrow(datax_top))
-EFA_low <- fa.parallel(datax_low_cor, fa = "fa", n.obs = nrow(datax_low))
+EFA_top <- fa.parallel(data_top_cor, fa = "fa", n.obs = nrow(data_top))
+EFA_low <- fa.parallel(data_low_cor, fa = "fa", n.obs = nrow(data_low))
 
 # Estimate factor models
-EFA_top_specific <- fa(datax_top_cor, 
+EFA_top_specific <- fa(data_top_cor, 
                        nfactors=EFA_top$nfact,
-                       n.obs = nrow(datax_top),
+                       n.obs = nrow(data_top),
                        SMC=TRUE,
                        fm = "ml",
                        rotate="promax",
                        max.iter=1000)
 
-EFA_low_specific <- fa(datax_low_cor, 
+EFA_low_specific <- fa(data_low_cor, 
                        nfactors=EFA_low$nfact,
-                       n.obs = nrow(datax_low),
+                       n.obs = nrow(data_low),
                        SMC=TRUE,
                        fm = "ml",
                        rotate="promax",
@@ -232,28 +272,30 @@ CUT3_t <- EFA_top_specific$loadings
 CUT3_l <- EFA_low_specific$loadings
 
 
+
 ###### 4.2.4 Full Data  ##########################################################
 
 # Prepare
-datax_top <- datax
+data_full <- datay_train %>% 
+  select(-freq)
 
-datax_top_cor <- cor(datax_top[,4:19])
+data_full_cor <- cor(data_full)
 
 # Check assumptions
-bar_top <- cortest.bartlett(datax_top_cor, n=nrow(datax_top))
+bar_top <- cortest.bartlett(data_full_cor , n=nrow(data_full))
 bar_top
 
-KMO_RES_top <- KMO(datax_top_cor)
+KMO_RES_top <- KMO(data_full_cor )
 KMO_RES_top 
 
 
 # Estimate number of factors
-EFA_top <- fa.parallel(datax_top_cor, fa = "fa", n.obs = nrow(datax_top))
+EFA_top <- fa.parallel(data_full_cor , fa = "fa", n.obs = nrow(data_full))
 
 # Estimate factor models
-EFA_top_specific <- fa(datax_top_cor, 
+EFA_top_specific <- fa(data_full_cor , 
                        nfactors=EFA_top$nfact,
-                       n.obs = nrow(datax_top),
+                       n.obs = nrow(data_full),
                        SMC=TRUE,
                        fm = "ml",
                        rotate="promax",
@@ -271,34 +313,39 @@ FULL <- EFA_top_specific$loadings
 print(CUT1_t, cutoff = 0.5) #2 factors
 print(CUT1_l, cutoff = 0.5) #3-4 factors
 
-print(CUT2_t, cutoff = 0.3) #2-3 factors
-print(CUT2_l, cutoff = 0.3) #3-4 factors
+print(CUT2_t, cutoff = 0.5) #2 factors
+print(CUT2_l, cutoff = 0.5) #3-4 factors
 
-print(CUT3_l, cutoff = 0.3) #random
-print(CUT3_t, cutoff = 0.3) #3-4 Unlcear
+print(CUT3_t, cutoff = 0.5) #3-4 factors
+print(CUT3_l, cutoff = 0.5) #random
 
-print(FULL, cutoff = 0.3)   #3 factor model 
+print(FULL, cutoff = 0.2)   #3-4 factor model 
 
 ###### 4.3 Extracted factor models  #################################################
 
-```{r}
 model_CUT1_t<- ' A =~ mbi_1+mbi_2+mbi_3+mbi_4+mbi_6+mbi_8 +mbi_9+mbi_13+mbi_14+mbi_15
                  B =~ mbi_5+mbi_7+mbi_11+mbi_12+mbi_16'
 # mbi_10 exclued
+
+model_FULL<- ' A =~ mbi_1+mbi_2+mbi_3+mbi_4+mbi_6
+               B =~ mbi_5+mbi_7+mbi_11+mbi_12+mbi_16
+               C =~ mbi_13+mbi_14+mbi_15
+               D =~ mbi_8 +mbi_9'
+# mbi_10 exclued
+
 
 model_MBI_theory <- '  A =~ mbi_1+mbi_2+mbi_3+mbi_4+mbi_6
                    B =~ mbi_5+mbi_7+mbi_10+mbi_11+mbi_12+mbi_16
                    C =~ mbi_8+mbi_9+mbi_13+mbi_14+mbi_15'
 
-model_MBI_1_factor <- '  A =~ mbi_1+mbi_2+mbi_3+mbi_4+mbi_6+ mbi_7+mbi_11+mbi_12+mbi_16+ mbi_13+mbi_14+mbi_15+ mbi_8+mbi_9'
-
-```
 
 ###### 5. CFA  #####################################################################
-###### 5.1 Extracted Model Top 20%  ################################################
-```{r, include = FALSE}
-model_Factor <- model_CUT1_t
 
+# Simulation conditions
+size_n <- c(1000, 1500, 2000, 5000)
+nitr <- 5
+
+# IterateCFA function
 iterateCFA <- function(data, n_itr, sample_size, freqCUT) {
   results_top = matrix(nrow = n_itr, ncol = 7)
   results_low = matrix(nrow = n_itr, ncol = 7)
@@ -320,11 +367,7 @@ iterateCFA <- function(data, n_itr, sample_size, freqCUT) {
                                    srmr = results_low[,4], cfi = results_low[,5], rmsea = results_low[,6], subsamplesize = results_low[,7])
   return(RES)
 }
-```
-<br />
-  Next we assess the effect of different sample sizes and the different splits.
-<br />
-  ```{r, include = FALSE}
+
 size_top <- c()
 size_low <- c()
 size_top_sd <- c()
@@ -351,39 +394,12 @@ srmr_LOW <- c()
 srmr_sd_LOW <- c()
 
 FinRES <- list()
-```
+###### 5.1 Extracted Model Top 20%  ################################################
+model_Factor <- model_CUT1_t
 
-```{r, include = FALSE}
-datax <- dataFREQ <- datax
-
-Splits <- c()
-freq_2080 <- dataFREQ %>% 
-  arrange(freq) %>% 
-  slice_tail(prop = 0.2)
-Splits[1] <- min(freq_2080$freq)
-
-freq_5050 <- dataFREQ %>% 
-  arrange(freq) %>% 
-  slice_tail(prop = 0.5)
-Splits[2] <- min(freq_5050$freq)
-
-freq_8020 <- dataFREQ %>% 
-  arrange(freq) %>% 
-  slice_tail(prop = 0.8)
-Splits[3] <- min(freq_8020$freq)
-```
-<br />
-  Here we define the different sample sizes we want to test and the number of iterations for each sample size.
-<br />
-  ```{r}
-size_n <- c(2000, 5000)
-nitr <- 50
-
-```
-
-```{r, include = FALSE}
+###### 5.1.1 20/80 ################################################
 for (i in 1:length(size_n)){
-  test <- iterateCFA(datax, n_itr = nitr, freqCUT = Splits[1], sample_size = size_n[i])
+  test <- iterateCFA(data_test, n_itr = nitr, freqCUT = Splits_percentage[1], sample_size = size_n[i])
   
   size_top[i] <- median(test$results_top_df$subsamplesize)
   size_top_sd[i] <- sd(test$results_top_df$subsamplesize)
@@ -428,14 +444,11 @@ colnames(d_low) <- colnames(d_top)
 dx <- rbind(d_top, d_low)
 
 Res_1CUT_2080 <- dx
-```
 
-<br />
-  Next median split.
-<br />
-  ```{r, include = FALSE}
+###### 5.1.2 Median ################################################
+
 for (i in 1:length(size_n)){
-  test <- iterateCFA(datax, n_itr = nitr, freqCUT = 5, sample_size = size_n[i])
+  test <- iterateCFA(data_test, n_itr = nitr, freqCUT = Splits_percentage[2], sample_size = size_n[i])
   
   size_top[i] <- median(test$results_top_df$subsamplesize)
   size_top_sd[i] <- sd(test$results_top_df$subsamplesize)
@@ -480,14 +493,11 @@ colnames(d_low) <- colnames(d_top)
 dx <- rbind(d_top, d_low)
 
 Res_1CUT_Median <- dx
-```
 
-<br />
-  Next 80/20 split.
-<br />
-  ```{r, include = FALSE}
+###### 5.1.3 80/20 ################################################
+
 for (i in 1:length(size_n)){
-  test <- iterateCFA(datax, n_itr = nitr, freqCUT = 1, sample_size = size_n[i])
+  test <- iterateCFA(data_test, n_itr = nitr, freqCUT = Splits_percentage[3], sample_size = size_n[i])
   
   size_top[i] <- median(test$results_top_df$subsamplesize)
   size_top_sd[i] <- sd(test$results_top_df$subsamplesize)
@@ -532,103 +542,14 @@ colnames(d_low) <- colnames(d_top)
 dx <- rbind(d_top, d_low)
 
 Res_1CUT_8020 <- dx
-```
-
-
-
-
-
 
 
 ###### 5.2 MBI 3 factor Model ################################################
-```{r, include = FALSE}
 model_Factor <- model_MBI_theory
 
-iterateCFA <- function(data, n_itr, sample_size, freqCUT) {
-  results_top = matrix(nrow = n_itr, ncol = 7)
-  results_low = matrix(nrow = n_itr, ncol = 7)
-  RES <- list()
-  for (i in 1:n_itr) {
-    dfSamp <- slice_sample(data, n = sample_size) 
-    dataSAMP_top <- filter(dfSamp, freq > freqCUT)
-    dataSAMP_low  <- filter(dfSamp, freq <= freqCUT)  
-    factor_top <- cfa(model_Factor, data = dataSAMP_top[,4:19], estimator = "WLSMV")
-    factor_low <- cfa(model_Factor, data = dataSAMP_low[,4:19], estimator = "WLSMV")
-    results_top[i,1:6] <- fitMeasures(factor_top, c("chisq","df","pvalue","srmr","cfi","rmsea"))
-    results_low[i,1:6] <- fitMeasures(factor_low, c("chisq","df","pvalue","srmr","cfi","rmsea"))
-    results_top[i,7] <- nrow(dataSAMP_top) 
-    results_low[i,7] <- nrow(dataSAMP_low) 
-  }
-  RES$results_top_df <- data.frame(chisq = results_top[,1], df = results_top[,2], pvalue = results_top[,3], 
-                                   srmr = results_top[,4], cfi = results_top[,5], rmsea = results_top[,6], subsamplesize = results_top[,7])
-  RES$results_low_df <- data.frame(chisq = results_low[,1], df = results_low[,2], pvalue = results_low[,3], 
-                                   srmr = results_low[,4], cfi = results_low[,5], rmsea = results_low[,6], subsamplesize = results_low[,7])
-  return(RES)
-}
-```
-<br />
-  Next we assess the effect of different sample sizes and the different splits.
-<br />
-  ```{r, include = FALSE}
-size_top <- c()
-size_low <- c()
-size_top_sd <- c()
-size_low_sd <- c()
-
-CFI_TOP <- c()
-CFI_sd_TOP <- c()
-CFI_LOW <- c()
-CFI_sd_LOW <- c()
-
-rmsea_TOP <- c()
-rmsea_sd_TOP <- c()
-rmsea_LOW <- c()
-rmsea_sd_LOW <- c()
-
-p_TOP <- c()
-p_sd_TOP <- c()
-p_LOW <- c()
-p_sd_LOW <- c()
-
-srmr_TOP <- c()
-srmr_sd_TOP <- c()
-srmr_LOW <- c()
-srmr_sd_LOW <- c()
-
-FinRES <- list()
-```
-
-```{r, include = FALSE}
-datax <- dataFREQ <- datax
-
-Splits <- c()
-freq_2080 <- dataFREQ %>% 
-  arrange(freq) %>% 
-  slice_tail(prop = 0.2)
-Splits[1] <- min(freq_2080$freq)
-
-freq_5050 <- dataFREQ %>% 
-  arrange(freq) %>% 
-  slice_tail(prop = 0.5)
-Splits[2] <- min(freq_5050$freq)
-
-freq_8020 <- dataFREQ %>% 
-  arrange(freq) %>% 
-  slice_tail(prop = 0.8)
-1 <- min(freq_8020$freq)
-```
-<br />
-  Here we define the different sample sizes we want to test and the number of iterations for each sample size.
-<br />
-  ```{r}
-size_n <- c(2000, 5000)
-nitr <- 50
-
-```
-
-```{r, include = FALSE}
+###### 5.2.1 20/80 ################################################
 for (i in 1:length(size_n)){
-  test <- iterateCFA(datax, n_itr = nitr, freqCUT = Splits[1], sample_size = size_n[i])
+  test <- iterateCFA(data_test, n_itr = nitr, freqCUT = Splits_percentage[1], sample_size = size_n[i])
   
   size_top[i] <- median(test$results_top_df$subsamplesize)
   size_top_sd[i] <- sd(test$results_top_df$subsamplesize)
@@ -673,13 +594,11 @@ colnames(d_low) <- colnames(d_top)
 dx <- rbind(d_top, d_low)
 
 Res_Theory_2080 <- dx
-```
-<br />
-  Next median split.
-<br />
-  ```{r, include = FALSE}
+
+###### 5.2.2 Median ################################################
+
 for (i in 1:length(size_n)){
-  test <- iterateCFA(datax, n_itr = nitr, freqCUT = 5, sample_size = size_n[i])
+  test <- iterateCFA(data_test, n_itr = nitr, freqCUT = Splits_percentage[2], sample_size = size_n[i])
   
   size_top[i] <- median(test$results_top_df$subsamplesize)
   size_top_sd[i] <- sd(test$results_top_df$subsamplesize)
@@ -724,15 +643,11 @@ colnames(d_low) <- colnames(d_top)
 dx <- rbind(d_top, d_low)
 
 Res_Theory_Median <- dx
-```
 
-```
-<br />
-  Next 80/20 split.
-<br />
-  ```{r, include = FALSE}
+###### 5.2.3 80/20 ################################################
+
 for (i in 1:length(size_n)){
-  test <- iterateCFA(datax, n_itr = nitr, freqCUT = 1, sample_size = size_n[i])
+  test <- iterateCFA(data_test, n_itr = nitr, freqCUT = Splits_percentage[3], sample_size = size_n[i])
   
   size_top[i] <- median(test$results_top_df$subsamplesize)
   size_top_sd[i] <- sd(test$results_top_df$subsamplesize)
@@ -777,100 +692,18 @@ colnames(d_low) <- colnames(d_top)
 dx <- rbind(d_top, d_low)
 
 Res_Theory_8020 <- dx
-```
 
 
 
 
-###### 5.3 MBI 1 factor Model ################################################
-```{r, include = FALSE}
-model_Factor <- model_MBI_1_factor
 
-iterateCFA <- function(data, n_itr, sample_size, freqCUT) {
-  results_top = matrix(nrow = n_itr, ncol = 7)
-  results_low = matrix(nrow = n_itr, ncol = 7)
-  RES <- list()
-  for (i in 1:n_itr) {
-    dfSamp <- slice_sample(data, n = sample_size) 
-    dataSAMP_top <- filter(dfSamp, freq > freqCUT)
-    dataSAMP_low  <- filter(dfSamp, freq <= freqCUT)  
-    factor_top <- cfa(model_Factor, data = dataSAMP_top[,4:19], estimator = "WLSMV")
-    factor_low <- cfa(model_Factor, data = dataSAMP_low[,4:19], estimator = "WLSMV")
-    results_top[i,1:6] <- fitMeasures(factor_top, c("chisq","df","pvalue","srmr","cfi","rmsea"))
-    results_low[i,1:6] <- fitMeasures(factor_low, c("chisq","df","pvalue","srmr","cfi","rmsea"))
-    results_top[i,7] <- nrow(dataSAMP_top) 
-    results_low[i,7] <- nrow(dataSAMP_low) 
-  }
-  RES$results_top_df <- data.frame(chisq = results_top[,1], df = results_top[,2], pvalue = results_top[,3], 
-                                   srmr = results_top[,4], cfi = results_top[,5], rmsea = results_top[,6], subsamplesize = results_top[,7])
-  RES$results_low_df <- data.frame(chisq = results_low[,1], df = results_low[,2], pvalue = results_low[,3], 
-                                   srmr = results_low[,4], cfi = results_low[,5], rmsea = results_low[,6], subsamplesize = results_low[,7])
-  return(RES)
-}
-```
-<br />
-  Next we assess the effect of different sample sizes and the different splits.
-<br />
-  ```{r, include = FALSE}
-size_top <- c()
-size_low <- c()
-size_top_sd <- c()
-size_low_sd <- c()
 
-CFI_TOP <- c()
-CFI_sd_TOP <- c()
-CFI_LOW <- c()
-CFI_sd_LOW <- c()
+###### 5.3 MBI 3 factor Model ################################################
+model_Factor <- model_FULL
 
-rmsea_TOP <- c()
-rmsea_sd_TOP <- c()
-rmsea_LOW <- c()
-rmsea_sd_LOW <- c()
-
-p_TOP <- c()
-p_sd_TOP <- c()
-p_LOW <- c()
-p_sd_LOW <- c()
-
-srmr_TOP <- c()
-srmr_sd_TOP <- c()
-srmr_LOW <- c()
-srmr_sd_LOW <- c()
-
-FinRES <- list()
-```
-
-```{r, include = FALSE}
-datax <- dataFREQ <- datax
-
-Splits <- c()
-freq_2080 <- dataFREQ %>% 
-  arrange(freq) %>% 
-  slice_tail(prop = 0.2)
-Splits[1] <- min(freq_2080$freq)
-
-freq_5050 <- dataFREQ %>% 
-  arrange(freq) %>% 
-  slice_tail(prop = 0.5)
-Splits[2] <- min(freq_5050$freq)
-
-freq_8020 <- dataFREQ %>% 
-  arrange(freq) %>% 
-  slice_tail(prop = 0.8)
-Splits[3] <- min(freq_8020$freq)
-```
-<br />
-  Here we define the different sample sizes we want to test and the number of iterations for each sample size.
-<br />
-  ```{r}
-size_n <- c(2000, 5000)
-nitr <- 50
-
-```
-
-```{r, include = FALSE}
+###### 5.3.1 20/80 ################################################
 for (i in 1:length(size_n)){
-  test <- iterateCFA(datax, n_itr = nitr, freqCUT = Splits[1], sample_size = size_n[i])
+  test <- iterateCFA(data_test, n_itr = nitr, freqCUT = Splits_percentage[1], sample_size = size_n[i])
   
   size_top[i] <- median(test$results_top_df$subsamplesize)
   size_top_sd[i] <- sd(test$results_top_df$subsamplesize)
@@ -914,15 +747,12 @@ d_low$group <- c("low ")
 colnames(d_low) <- colnames(d_top)
 dx <- rbind(d_top, d_low)
 
-Res_1fact_2080 <- dx
-```
+Res_FULL_2080 <- dx
 
-<br />
-  Next median split.
-<br />
-  ```{r, include = FALSE}
+###### 5.3.2 Median ################################################
+
 for (i in 1:length(size_n)){
-  test <- iterateCFA(datax, n_itr = nitr, freqCUT = 5, sample_size = size_n[i])
+  test <- iterateCFA(data_test, n_itr = nitr, freqCUT = Splits_percentage[2], sample_size = size_n[i])
   
   size_top[i] <- median(test$results_top_df$subsamplesize)
   size_top_sd[i] <- sd(test$results_top_df$subsamplesize)
@@ -966,15 +796,12 @@ d_low$group <- c("low ")
 colnames(d_low) <- colnames(d_top)
 dx <- rbind(d_top, d_low)
 
-Res_1fact_Median <- dx
-```
+Res_FULL_Median <- dx
 
-<br />
-  Next 80/20 split.
-<br />
-  ```{r, include = FALSE}
+###### 5.3.3 80/20 ################################################
+
 for (i in 1:length(size_n)){
-  test <- iterateCFA(datax, n_itr = nitr, freqCUT = 1, sample_size = size_n[i])
+  test <- iterateCFA(data_test, n_itr = nitr, freqCUT = Splits_percentage[3], sample_size = size_n[i])
   
   size_top[i] <- median(test$results_top_df$subsamplesize)
   size_top_sd[i] <- sd(test$results_top_df$subsamplesize)
@@ -1018,8 +845,13 @@ d_low$group <- c("low ")
 colnames(d_low) <- colnames(d_top)
 dx <- rbind(d_top, d_low)
 
-Res_1fact_8020 <- dx
-```
+Res_FULL_8020 <- dx
+
+
+
+
+
+
 
 ###### 5.4 Factor Model Results ################################################
 Res_1CUT_2080
@@ -1030,29 +862,22 @@ Res_Theory_2080
 Res_Theory_Median
 Res_Theory_8020
 
-Res_1fact_2080
-Res_1fact_Median
-Res_1fact_8020
+Res_FULL_2080
+Res_FULL_Median
+Res_FULL_8020
 
 ###### 5.4.1 Q1 ################################################
 # Does the factor model derived in the top 20% fit in the remaining population? -> "ok"
-Res_1CUT_2080[4,] #CFI 0.94, #RMSEA 0.08
+Res_1CUT_2080[8,] #CFI 0.94, #RMSEA 0.08
 
 ###### 5.4.2 Q2 ################################################
-# Does the factor model derived in the top 20% fit in the less than 5 -> "marginal"
-Res_1CUT_Median[4,] #CFI 0.86 #RMSEA 0.07 #SRMR 0.07
-
-# Does the factor model derived in the top 20% fit in the only 1 -> "marginal"
-Res_1CUT_8020[4,] #CFI 0.77 #RMSEA 0.06 #SRMR 0.07
+# Does the factor model derived in the top 20% fit in the lowest 20% -> "marginal"
+Res_1CUT_8020[8,] #CFI 0.80 #RMSEA 0.07 #SRMR 0.07
 
 ###### 5.4.3 Q3 ################################################
-# Does the theory derived factor model fit in the top and less than 5 -> ok
-Res_Theory_2080[2,] #CFI 0.99 #RMSEA 0.02 #SRMR 0.04
-Res_Theory_Median[4,] #CFI 0.92 #RMSEA 0.05 #SRMR 0.05
-
-# Does the theory derived factor model fit in the top and only 1 -> ok
-Res_Theory_2080[2,] #CFI 0.99 #RMSEA 0.02 #SRMR 0.03
-Res_Theory_8020[4,] #CFI 0.90 #RMSEA 0.04 #SRMR 0.05
+# Does the theory derived factor model fit in the top and low 20% -> yes
+Res_Theory_2080[4,] #CFI 0.99 #RMSEA 0.02 #SRMR 0.03
+Res_Theory_8020[8,] #CFI 0.92 #RMSEA 0.04 #SRMR 0.05
 
 
 

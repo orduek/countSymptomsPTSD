@@ -4,11 +4,11 @@
 #                                                                            #
 #                         Or Duek & Tobias Spiller                           # 
 #                                                                            #
-#                       Code Version 0.3 (02.01.2021)                        #
+#                       Code Version 1.0 (15.02.2021)                        #
 #                                                                            #
 #----------------------------------------------------------------------------#
 #                                                                            #
-#                           MBI: Power law                                   #
+#                        Descriptives & Distribution                         #
 #									                                                           #
 ##############################################################################
 
@@ -19,126 +19,61 @@
 #----- 2. Import and prepare data -------------------------------------------#
 #----- 3. Descriptive -------------------------------------------------------#
 #----- 4. Count symptom profiles --------------------------------------------#
-#-----  4.1 Binarizing ------------------------------------------------------#
-#-----  4.2 Count combinations ----------------------------------------------#
-#-----  4.3 Plot ------------------------------------------------------------#
+#-----  4.1 Count combinations ----------------------------------------------#
+#-----  4.2 Plot ------------------------------------------------------------#
 #----- 5. Test distributions ------------------------------------------------#
 
 
 ## General Notes ##
-# protector.all = raw data 
-# data1 = MBI symptoms of selected participants (age <70, >18)
 # data2 = binarized dataframe
+# datax = dataframe script one with scores, binarized items and frequency profiles
+# datay = dataframe of items with ordinal ratings AND frequency of symptom profiles (redcued datax)
+# dataz = dataframe of items with ordinal ratings WITHOUT frequency of symptom profiles (redcued datay)
 
 ###### 1. Load Libraries #####################################################
 # Data handling + basic calculations
 if(!require("tidyverse")) install.packages("tidyverse")
-if(!require("readxl")) install.packages("readxl")
 if(!require("foreign")) install.packages("foreign")
 if(!require("ReIns")) install.packages("ReIns")
 
 #Power Law
 if(!require("poweRlaw")) install.packages("poweRlaw")
 
-#Factor Analysis
-if(!require("lavaan")) install.packages("lavaan")
-if(!require("psych")) install.packages("psych")
 
 ###### 2. Import and prepare data ############################################
-#### Import
-# protector.all <- read_csv("bp_export_09092019 Kopie.csv")
+# Prepare
+# Load datax & data2 created in script one!
 
-#### Prepare dataset
-### Clean dataset
-# Select numeric values (every second row with some adjustments)
-protector_values <- protector.all[,seq(1, ncol(protector.all), 2)]
-protector_values<- protector_values[,(1:86)] #the 86th colomn does not have an index an values, but only values
-protector_values$ID <- seq.int(nrow(protector_values)) # add ID
+data2<- read_delim("Generated Data/freq_count.csv", 
+                   ";", escape_double = FALSE, trim_ws = TRUE)
+# Count frequency of profiles
+data2_counted <- plyr::count(data2[, ])
 
-protector_values2 <- protector.all[,seq(2, ncol(protector.all), 2)]
-protector_values2<- protector_values2[,(86:99)]
-protector_values2$ID <- seq.int(nrow(protector_values2)) # add ID
 
-#Merge
-cleaned.master.df <- merge(protector_values,protector_values2, by= "ID")
-
-#Extract column names
-colnames.protect <- colnames(cleaned.master.df)
-colnames.protect <- as.data.frame(colnames.protect)
-
-#Rename columns
-names.df <- read_excel("names.xlsx") # Cleaned names list
-names.df <- t(names.df)
-colnames(names.df) = names.df[3, ] # the second row will be the header
-colnames(cleaned.master.df) <- colnames(names.df) 
-
-selected_variables_df <- cleaned.master.df %>%
-  select("user", "age", "sex", (mbi_1:mbi_16), (ISI_1:ISI_7)) %>% 
-  filter(age < 71) # Select 18-70 years old
-
-# Select only entry one per user 
-selected_variables_df$duplicate <- duplicated(selected_variables_df$user)
-selected_variables_df_dup <- selected_variables_df %>%
-  filter(duplicate == FALSE) 
-
-data1 <- selected_variables_df_dup %>% 
-  drop_na(mbi_1:mbi_16) %>%
-  select("user", "age", "sex", mbi_1:mbi_16, ISI_1:ISI_7)
-
-data1$sex <- as.factor(data1$sex)
-
-data1 <- data1 %>% 
-  mutate(totalMBI = rowSums(data1[3:18]),
-         totalISI = rowSums(data1[19:26])) 
-
+datax<- read_delim("Generated Data/Matched_freq_count.csv", 
+                   ";", escape_double = FALSE, trim_ws = TRUE)
 
 ###### 3. Descriptive #######################################################
 
-summary(data1)
-sd(data1$age)
-sd(data1$totalMBI)
-
-hist(data1$totalMBI)
-
+## Datax
+summary(datax)
+mean(datax$age)
+sd(datax$age)
+mean(datax$totalMBI)
+sd(datax$totalMBI)
+hist(datax$totalMBI)
 
 ###### 4. Count symptom profiles ############################################
-######  4.1 Binarized #######################################################
-## Binarizing 
-# ratings below 3 to 0 (no symptoms) or more to one
-data1_binarized <- data1
-for (i in 1:16){
-  nam <- paste("mbi_", i, sep = "")
-  mbi <- paste("MBI_", i, sep = "")
-  data1_binarized[mbi] <- dplyr::case_when(data1_binarized[nam]<=2 ~ 'NO', data1_binarized[nam]>=3 ~ 'YES')
-  
-}
-
-# Create new data frame
-data2 <- data1_binarized %>% 
-  select(29:44) %>% 
-  tibble()
-
-######  4.2 Count combinations ###############################################
-### 4.2.1 Count frequency of profiles
-data2_counted <- plyr::count(data2[, -1])
-
-# Create sum score of endorsed symptoms
-data2_counted$sumsymptoms <- apply(data2_counted, 1, function(x) length(which(x=="YES")))
-
-# Create full dataset
-datax <- dplyr::full_join(data1_binarized, data2_counted, by = c("MBI_1" = "MBI_1", "MBI_2" = "MBI_2", "MBI_3" = "MBI_3","MBI_4" = "MBI_4","MBI_5" = "MBI_5",
-                                                                 "MBI_6" = "MBI_6", "MBI_7" = "MBI_7", "MBI_8" = "MBI_8","MBI_9" = "MBI_9","MBI_10" = "MBI_10",
-                                                                 "MBI_11" = "MBI_11", "MBI_12" = "MBI_12", "MBI_13" = "MBI_13","MBI_14" = "MBI_14","MBI_15" = "MBI_15",
-                                                                 "MBI_16" = "MBI_16"))
-### 4.2.4 COMBINATIONS
-### 4.2.2 Total number of unique symptom combination
+######  4.1 Count combinations ###############################################
+### 4.1.1 COMBINATIONS
+### 4.1.2 Total number of unique symptom combination
 nrow(data2_counted) #6640
 
 ## Endorsed only once
-sum(datax$freq==1) #4109
+sum(data2_counted$freq==1) #4109
 
 ## Endorsed <= 5
-sum(data2_counted$freq<= 5) #6010
+sum(data2_counted$freq<= 2) #6010
 
 ## Endorsed <= 100
 sum(data2_counted$freq<= 100) #6618
@@ -158,7 +93,6 @@ print(data2_counted[2,]) # only mbi10 yes
 print(data2_counted[3,]) # all yes
 
 ### 4.2.4 INDIVIDUALS
-
 ## Median endorsement
 med <- median(datax$freq) #12
 quantile(datax$freq) # Q1 = 2, Q3= 70, IQR = 68
@@ -179,7 +113,6 @@ sum(datax$freq<= 50)/nrow(datax) # 0.692
 ## Endorsed > 100
 sum(datax$freq> 100) #4818
 sum(datax$freq> 100)/nrow(datax) # 0.198
-
 
 ## Endorsed Top 10 frequencies
 top_10 <- (data2_counted$freq[1:10])
@@ -214,7 +147,7 @@ ggplot(freq1_top50, aes(x=as.factor(1:nrow(freq1_top50)),y=freq)) +
     axis.ticks = element_blank(),
     plot.title = element_text(hjust = 0.5)) +
   scale_y_continuous(breaks=c(10, 50, 100, 250, 500, 800)) +
-  ggtitle("The frequency of the hundret most common symptom combinations")
+  ggtitle("The frequency of the fifty most common symptom combinations")
 dev.off()  
 
 
@@ -276,9 +209,9 @@ estimate_xmin(m_pl, pars = seq(1.8, 2.5, 0.01))
 ## Test if power law is possible
 bs_p = bootstrap_p(m_pl, no_of_sims = 1000, threads = 5)
 # p value
-bs_p$p #0.594 -> power law possible
+bs_p$p #0.622 -> power law possible
 
-pdf("MBI_PL_estiamtes.pdf", width=8, height=8)
+pdf("PL_estiamtes.pdf", width=8, height=8)
 plot(bs_p)
 dev.off() 
 
@@ -299,7 +232,7 @@ m_pois$setXmin(est_m_pois)
 
 # Plot different distrubutions
 options(scipen=5)
-pdf("MBI_qq_distributions.pdf", width=8, height=8)
+pdf("qq_distributions.pdf", width=8, height=8)
 plot(m_pl, main="Distribution of symptom combinations",
      xlab="Number of endorsements", ylab="CDF",panel.first = grid(col = "grey80"))
 text(x=200, y=0.5, "Power-Law  ",col="2", font=2, cex=0.8)
@@ -320,5 +253,9 @@ m_ln$setPars(est_m_ln)
 comp = compare_distributions(m_pl, m_ln)
 comp$p_two_sided #not sig: inconclusive
 comp$p_one_sided #not sig: inconclusive
+
+
+
+
 
 

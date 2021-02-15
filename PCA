@@ -1,0 +1,419 @@
+##############################################################################
+#									                                                           #
+# 	 The Heterogeneity of Symptoms of Mental Disorders is Heavy-Tailed       #
+#                                                                            #
+#                         Or Duek & Tobias Spiller                           # 
+#                                                                            #
+#                       Code Version 1.0 (15.02.2021)                        #
+#                                                                            #
+#----------------------------------------------------------------------------#
+#                                                                            #
+#                                   PCA                                      #
+#									                                                           #
+##############################################################################
+
+
+###### Table of Contents #####################################################
+# Script 2: PCA
+#----- 1. Load libraries ----------------------------------------------------#
+#----- 2. Import and prepare data -------------------------------------------#
+#----- 3. Descriptive -------------------------------------------------------#
+#----- 4. PCA  --------------------------------------------------------------#
+#-----  4.1 Full sample  ----------------------------------------------------#
+#-----  4.2 Percentage based sample  ----------------------------------------#
+#-----  4.3 Frequency based sample  -----------------------------------------#
+#-----  4.4 Results  --------------------------------------------------------#
+#----- 5. Session Info  -----------------------------------------------------#
+
+## General Notes ##
+# datax = dataframe script one with scores, binarized items and frequency profiles
+# datay = dataframe of items with ordinal ratings AND frequency of symptom profiles (redcued datax)
+# dataz = dataframe of items with ordinal ratings WITHOUT frequency of symptom profiles (redcued datay)
+
+###### 1. Load Libraries #####################################################
+# Data handling + basic calculations
+if(!require("tidyverse")) install.packages("tidyverse")
+if(!require("foreign")) install.packages("foreign")
+if(!require("ReIns")) install.packages("ReIns")
+
+#Factor Analysis
+if(!require("lavaan")) install.packages("lavaan")
+if(!require("psych")) install.packages("psych")
+if(!require("GPArotation")) install.packages("GPArotation")
+if(!require("FactoMineR")) install.packages("FactoMineR")
+if(!require("factoextra")) install.packages("factoextra")
+
+
+
+###### 2. Import and prepare data ############################################
+# Load datax created in script one!
+
+datax<- read_delim("Generated Data/Matched_freq_count.csv", 
+                   ";", escape_double = FALSE, trim_ws = TRUE)
+
+# Prepare
+# Create Splits based on % of sample
+Splits_percentage <- c()
+
+freq_2080 <- datax %>% 
+  arrange(freq) %>% 
+  slice_tail(prop = 0.2)
+Splits_percentage[1] <- min(freq_2080$freq)
+
+freq_5050 <- datax %>% 
+  arrange(freq) %>% 
+  slice_tail(prop = 0.5)
+Splits_percentage[2] <- min(freq_5050$freq)
+
+freq_8020 <- datax %>% 
+  arrange(freq) %>% 
+  slice_tail(prop = 0.8)
+Splits_percentage[3] <- min(freq_8020$freq)
+
+# Create Splits based on frequency
+Splits_frequency <- c()
+Splits_frequency[1] <- 5
+Splits_frequency[2] <- 2
+Splits_frequency[3] <- 1
+
+Splits_percentage
+Splits_frequency
+
+# Prepare dataset for further analysis
+datay <- datax %>% 
+  select(mbi_1:mbi_16, freq)
+
+dataz <- datay %>% 
+  select(- freq)
+
+###### 3. Descriptive ########################################################
+
+summary(datax)
+summary(datay)
+summary(dataz)
+
+###### 4. PCA ################################################################
+results = matrix(nrow = 7, ncol = 8)
+colnames(results) <- c("Prop Sample", "Part", "Sample Size", "Var Dim1","Var Dim2","Var Dim3","Var Dim4", "Cumm Var")
+
+######  4.1 Full sample ######################################################
+# create correlation matrix
+# dataCor_full <- cor(datax[3:19])
+# fit_full <- princomp(dataCor_full, cor=TRUE)
+# summary(fit_full) # print variance accounted for
+# loadings(fit_full) # pc loadings
+# plot(fit_full,type="lines") # scree plot
+# fit_full$scores # the principal components
+# biplot(fit_full)
+
+# PCA Variable Factor Map
+fit2_full <- PCA(dataz) # graphs generated automatically
+# Visualize eigenvalues/variances
+fviz_screeplot(fit2_full, addlabels = TRUE, ylim = c(0, 50))
+
+# Variance explained by top dimensions
+summary(fit2_full) #1 = 0.48, 2 = 0.25, 3 = 0.06, 4 = 0.04 /SUM = 0.83  VS EIGENVALUE PERCENTAGE ?!?!
+fviz_screeplot(fit2_full, addlabels = TRUE, ylim = c(0, 50))  # 1 = 38, 2 = 11, 3 = 7.8, 4 = 5.6 // SUM = 62.4
+
+eigen_full <- get_eig(fit2_full) %>% 
+  as_tibble()
+results[7,4:7] <- eigen_full$variance.percent[1:4]
+results[7,8] <- eigen_full$cumulative.variance.percent[5]
+results[7,3] <- nrow(dataz)
+
+fviz_contrib(fit2_full, choice = "var", axes = 1, top = 20)
+fviz_contrib(fit2_full, choice = "var", axes = 2, top = 20)
+fviz_contrib(fit2_full, choice = "var", axes = 3, top = 20)
+fviz_contrib(fit2_full, choice = "var", axes = 4, top = 20)
+
+# Control variable colors using their contributions
+# fviz_pca_var(fit2_full, col.var="contrib",
+#              gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
+#              repel = TRUE # Avoid text overlapping
+# )
+
+######  4.2 Percentage based sample ######################################################
+results[1,2] <- "top"
+results[2,2] <- "low"
+results[3,2] <- "top"
+results[4,2] <- "low"
+results[5,2] <- "top"
+results[6,2] <- "low"
+
+results[1:2,1] <- "80/20"
+results[3:4,1] <- "Median"
+results[5:6,1] <- "20/80"
+
+######   4.2.1 80/20 split ###############################################################
+######    4.2.1.1 Top ###############################################################
+# Preprocess
+data_top <- datay %>% 
+  filter(freq > Splits_percentage[1]) %>% 
+  select(-freq)
+results[1,3] <- nrow(data_top)
+
+# PCA Variable Factor Map
+fit2_top <- PCA(data_top) # graphs generated automatically
+
+# Variance explained by top dimensions
+fviz_screeplot(fit2_top, addlabels = TRUE, ylim = c(0, 50))
+eigen_top <- get_eig(fit2_top) %>% 
+  as_tibble()
+results[1,4:7] <- eigen_top$variance.percent[1:4]
+results[1,8] <- eigen_top$cumulative.variance.percent[5]
+
+# fviz_contrib(fit2_top, choice = "var", axes = 1, top = 20)
+
+######    4.2.1.2 Low ###############################################################
+# Preprocess
+data_low <- datay %>% 
+  filter(freq <= Splits_percentage[1]) %>% 
+  select(-freq)
+results[2,3] <- nrow(data_low)
+
+# PCA Variable Factor Map
+fit2_low <- PCA(data_low) # graphs generated automatically
+
+# Variance explained by low dimensions
+fviz_screeplot(fit2_low, addlabels = TRUE, ylim = c(0, 50))
+eigen_low <- get_eig(fit2_low) %>% 
+  as_tibble()
+results[2,4:7] <- eigen_low$variance.percent[1:4]
+results[2,8] <- eigen_low$cumulative.variance.percent[5]
+
+# fviz_contrib(fit2_low, choice = "var", axes = 1, top = 20)
+
+######   4.2.2 Median split ###############################################################
+######    4.2.2.1 Top ###############################################################
+# Preprocess
+data_top <- datay %>% 
+  filter(freq > Splits_percentage[2]) %>% 
+  select(-freq)
+results[3,3] <- nrow(data_top)
+
+# PCA Variable Factor Map
+fit2_top <- PCA(data_top) # graphs generated automatically
+
+# Variance explained by top dimensions
+fviz_screeplot(fit2_top, addlabels = TRUE, ylim = c(0, 50))
+eigen_top <- get_eig(fit2_top) %>% 
+  as_tibble()
+results[3,4:7] <- eigen_top$variance.percent[1:4]
+results[3,8] <- eigen_top$cumulative.variance.percent[5]
+
+# fviz_contrib(fit2_top, choice = "var", axes = 1, top = 20)
+
+######    4.2.2.2 Low ###############################################################
+# Preprocess
+data_low <- datay %>% 
+  filter(freq <= Splits_percentage[2]) %>% 
+  select(-freq)
+results[4,3] <- nrow(data_low)
+
+# PCA Variable Factor Map
+fit2_low <- PCA(data_low) # graphs generated automatically
+
+# Variance explained by low dimensions
+fviz_screeplot(fit2_low, addlabels = TRUE, ylim = c(0, 50))
+eigen_low <- get_eig(fit2_low) %>% 
+  as_tibble()
+results[4,4:7] <- eigen_low$variance.percent[1:4]
+results[4,8] <- eigen_low$cumulative.variance.percent[5]
+
+# fviz_contrib(fit2_low, choice = "var", axes = 1, top = 20)
+
+######   4.2.3 20/80 split ###############################################################
+######    4.2.3.1 Top ###############################################################
+# Preprocess
+data_top <- datay %>% 
+  filter(freq > Splits_percentage[3]) %>% 
+  select(-freq)
+results[5,3] <- nrow(data_top)
+
+# PCA Variable Factor Map
+fit2_top <- PCA(data_top) # graphs generated automatically
+
+# Variance explained by top dimensions
+fviz_screeplot(fit2_top, addlabels = TRUE, ylim = c(0, 50))
+eigen_top <- get_eig(fit2_top) %>% 
+  as_tibble()
+results[5,4:7] <- eigen_top$variance.percent[1:4]
+results[5,8] <- eigen_top$cumulative.variance.percent[5]
+
+# fviz_contrib(fit2_top, choice = "var", axes = 1, top = 20)
+
+######    4.2.3.2 Low ###############################################################
+# Preprocess
+data_low <- datay %>% 
+  filter(freq <= Splits_percentage[3]) %>% 
+  select(-freq)
+results[6,3] <- nrow(data_low)
+# PCA Variable Factor Map
+fit2_low <- PCA(data_low) # graphs generated automatically
+
+# Variance explained by low dimensions
+fviz_screeplot(fit2_low, addlabels = TRUE, ylim = c(0, 50))
+eigen_low <- get_eig(fit2_low) %>% 
+  as_tibble()
+results[6,4:7] <- eigen_low$variance.percent[1:4]
+results[6,8] <- eigen_low$cumulative.variance.percent[5]
+
+# fviz_contrib(fit2_low, choice = "var", axes = 1, top = 20)
+
+######  4.2.4 Results Percentage based sample #########################################
+results_percentage <- results
+results_percentage
+
+
+
+
+
+######  4.3 Frequency based sample ######################################################
+colnames(results) <- c("Frequency", "Part", "Sample Size", "Var Dim1","Var Dim2","Var Dim3","Var Dim4", "Cumm Var")
+results[1,2] <- "top"
+results[2,2] <- "low"
+results[3,2] <- "top"
+results[4,2] <- "low"
+results[5,2] <- "top"
+results[6,2] <- "low"
+
+results[1:2,1] <- "5"
+results[3:4,1] <- "2"
+results[5:6,1] <- "1"
+
+######   4.3.1 Freq = 5  ###############################################################
+######    4.3.1.1 Top ###############################################################
+# Preprocess
+data_top <- datay %>% 
+  filter(freq > Splits_frequency[1]) %>% 
+  select(-freq)
+results[1,3] <- nrow(data_top)
+
+# PCA Variable Factor Map
+fit2_top <- PCA(data_top) # graphs generated automatically
+
+# Variance explained by top dimensions
+fviz_screeplot(fit2_top, addlabels = TRUE, ylim = c(0, 50))
+eigen_top <- get_eig(fit2_top) %>% 
+  as_tibble()
+results[1,4:7] <- eigen_top$variance.percent[1:4]
+results[1,8] <- eigen_top$cumulative.variance.percent[5]
+
+# fviz_contrib(fit2_top, choice = "var", axes = 1, top = 20)
+
+######    4.3.1.2 Low ###############################################################
+# Preprocess
+data_low <- datay %>% 
+  filter(freq <= Splits_frequency[1]) %>% 
+  select(-freq)
+results[2,3] <- nrow(data_low)
+
+# PCA Variable Factor Map
+fit2_low <- PCA(data_low) # graphs generated automatically
+
+# Variance explained by low dimensions
+fviz_screeplot(fit2_low, addlabels = TRUE, ylim = c(0, 50))
+eigen_low <- get_eig(fit2_low) %>% 
+  as_tibble()
+results[2,4:7] <- eigen_low$variance.percent[1:4]
+results[2,8] <- eigen_low$cumulative.variance.percent[5]
+
+# fviz_contrib(fit2_low, choice = "var", axes = 1, top = 20)
+
+
+
+######   4.3.2 Freq = 2  ###############################################################
+######    4.3.2.1 Top ###############################################################
+# Preprocess
+data_top <- datay %>% 
+  filter(freq > Splits_frequency[2]) %>% 
+  select(-freq)
+results[3,3] <- nrow(data_top)
+
+# PCA Variable Factor Map
+fit2_top <- PCA(data_top) # graphs generated automatically
+
+# Variance explained by top dimensions
+fviz_screeplot(fit2_top, addlabels = TRUE, ylim = c(0, 50))
+eigen_top <- get_eig(fit2_top) %>% 
+  as_tibble()
+results[3,4:7] <- eigen_top$variance.percent[1:4]
+results[3,8] <- eigen_top$cumulative.variance.percent[5]
+
+# fviz_contrib(fit2_top, choice = "var", axes = 1, top = 20)
+
+######    4.3.2.2 Low ###############################################################
+# Preprocess
+data_low <- datay %>% 
+  filter(freq <= Splits_frequency[2]) %>% 
+  select(-freq)
+results[4,3] <- nrow(data_low)
+
+# PCA Variable Factor Map
+fit2_low <- PCA(data_low) # graphs generated automatically
+
+# Variance explained by low dimensions
+fviz_screeplot(fit2_low, addlabels = TRUE, ylim = c(0, 50))
+eigen_low <- get_eig(fit2_low) %>% 
+  as_tibble()
+results[4,4:7] <- eigen_low$variance.percent[1:4]
+results[4,8] <- eigen_low$cumulative.variance.percent[5]
+
+# fviz_contrib(fit2_low, choice = "var", axes = 1, top = 20)
+
+
+######   4.3.3 Freq =1  ###############################################################
+######    4.3.3.1 Top ###############################################################
+# Preprocess
+data_top <- datay %>% 
+  filter(freq > Splits_frequency[3]) %>% 
+  select(-freq)
+results[5,3] <- nrow(data_top)
+
+# PCA Variable Factor Map
+fit2_top <- PCA(data_top) # graphs generated automatically
+
+# Variance explained by top dimensions
+fviz_screeplot(fit2_top, addlabels = TRUE, ylim = c(0, 50))
+eigen_top <- get_eig(fit2_top) %>% 
+  as_tibble()
+results[5,4:7] <- eigen_top$variance.percent[1:4]
+results[5,8] <- eigen_top$cumulative.variance.percent[5]
+
+# fviz_contrib(fit2_top, choice = "var", axes = 1, top = 20)
+
+######    4.3.3.2 Low ###############################################################
+# Preprocess
+data_low <- datay %>% 
+  filter(freq <= Splits_frequency[3]) %>% 
+  select(-freq)
+results[6,3] <- nrow(data_low)
+
+# PCA Variable Factor Map
+fit2_low <- PCA(data_low) # graphs generated automatically
+
+# Variance explained by low dimensions
+fviz_screeplot(fit2_low, addlabels = TRUE, ylim = c(0, 50))
+eigen_low <- get_eig(fit2_low) %>% 
+  as_tibble()
+results[6,4:7] <- eigen_low$variance.percent[1:4]
+results[6,8] <- eigen_low$cumulative.variance.percent[5]
+
+# fviz_contrib(fit2_low, choice = "var", axes = 1, top = 20)
+
+######  4.3.4 Results Frequency based #########################################
+results_frequency <- results
+results_frequency
+
+######  4.4 Results ############################################################
+results_percentage
+results_frequency
+
+
+###### 5. Session Info #########################################################
+sessionInfo()
+
+
+
+
+#####################################  END  ####################################
