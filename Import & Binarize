@@ -1,0 +1,134 @@
+##############################################################################
+#									                                                           #
+# 	 The Heterogeneity of Symptoms of Mental Disorders is Heavy-Tailed       #
+#                                                                            #
+#                         Or Duek & Tobias Spiller                           # 
+#                                                                            #
+#                       Code Version 1.0 (15.02.2021)                        #
+#                                                                            #
+#----------------------------------------------------------------------------#
+#                                                                            #
+#                      Import and Binarize  - MBI                            #
+#									                                                           #
+##############################################################################
+
+
+###### Table of Contents #####################################################
+#----- 1. Load libraries ----------------------------------------------------#
+#----- 2. Import and prepare data -------------------------------------------#
+#----- 3. Descriptive -------------------------------------------------------#
+#----- 4. Binarizing & create datax  ----------------------------------------#
+#-----  4.1 Binarizing  ------------ ----------------------------------------#
+#-----  4.2 Create datax  ---------------------------------------------------#
+#----- 5. Session Info  -----------------------------------------------------#
+
+
+## General Notes ##
+# protector.all = raw data 
+# data1 = MBI symptoms of selected participants (age <70, >18)
+# data2 = binarized dataframe
+# datax = binarized & original items & frequency
+
+###### 1. Load Libraries #####################################################
+# Data handling + basic calculations
+if(!require("tidyverse")) install.packages("tidyverse")
+if(!require("readxl")) install.packages("readxl")
+if(!require("foreign")) install.packages("foreign")
+if(!require("ReIns")) install.packages("ReIns")
+
+###### 2. Import and prepare data ############################################
+#### Import
+# protector.all <- read_csv("Raw Data/bp_export_09092019 Kopie.csv")
+
+#### Prepare dataset
+### Clean dataset
+# Select numeric values (every second row with some adjustments)
+protector_values <- protector.all[,seq(1, ncol(protector.all), 2)]
+protector_values<- protector_values[,(1:86)] #the 86th colomn does not have an index an values, but only values
+protector_values$ID <- seq.int(nrow(protector_values)) # add ID
+
+protector_values2 <- protector.all[,seq(2, ncol(protector.all), 2)]
+protector_values2<- protector_values2[,(86:99)]
+protector_values2$ID <- seq.int(nrow(protector_values2)) # add ID
+
+#Merge
+cleaned.master.df <- merge(protector_values,protector_values2, by= "ID")
+
+#Extract column names
+colnames.protect <- colnames(cleaned.master.df)
+colnames.protect <- as.data.frame(colnames.protect)
+
+#Rename columns
+names.df <- read_excel("Raw Data/names.xlsx") # Cleaned names list
+names.df <- t(names.df)
+colnames(names.df) = names.df[3, ] # the second row will be the header
+colnames(cleaned.master.df) <- colnames(names.df) 
+
+selected_variables_df <- cleaned.master.df %>%
+  select("user", "age", "sex", (mbi_1:mbi_16), (ISI_1:ISI_7)) %>% 
+  filter(age < 71) # Select 18-70 years old
+
+# Select only entry one per user 
+selected_variables_df$duplicate <- duplicated(selected_variables_df$user)
+selected_variables_df_dup <- selected_variables_df %>%
+  filter(duplicate == FALSE) 
+
+data1 <- selected_variables_df_dup %>% 
+  drop_na(mbi_1:mbi_16) %>%
+  select("user", "age", "sex", mbi_1:mbi_16)
+
+data1$sex <- as.factor(data1$sex)
+
+data1 <- data1 %>% 
+  mutate(totalMBI = rowSums(data1[4:19])) 
+
+
+###### 3. Descriptive #######################################################
+
+summary(data1)
+sd(data1$age)
+sd(data1$totalMBI)
+
+hist(data1$totalMBI)
+
+###### 4. Binarizing & create datax ###########################################
+######  4.1 Binarizing ########################################################
+# ratings below 3 to 0 (no symptoms) or more to one
+data1_binarized <- data1
+for (i in 1:16){
+  nam <- paste("mbi_", i, sep = "")
+  mbi <- paste("MBI_", i, sep = "")
+  data1_binarized[mbi] <- dplyr::case_when(data1_binarized[nam]<=2 ~ 'NO', data1_binarized[nam]>=3 ~ 'YES')
+  
+}
+
+# Create new data frame
+data2 <- data1_binarized %>% 
+  select(21:36) %>% 
+  tibble()
+
+######  4.2 Create datax ########################################################
+### 4.2.1 Count frequency of profiles
+data2_counted <- plyr::count(data2[, ])
+
+# Create sum score of endorsed symptoms
+data2_counted$sumsymptoms <- apply(data2_counted, 1, function(x) length(which(x=="YES")))
+
+# Create full dataset
+datax <- dplyr::full_join(data1_binarized, data2_counted, by = c("MBI_1" = "MBI_1", "MBI_2" = "MBI_2", "MBI_3" = "MBI_3","MBI_4" = "MBI_4","MBI_5" = "MBI_5",
+                                                                 "MBI_6" = "MBI_6", "MBI_7" = "MBI_7", "MBI_8" = "MBI_8","MBI_9" = "MBI_9","MBI_10" = "MBI_10",
+                                                                 "MBI_11" = "MBI_11", "MBI_12" = "MBI_12", "MBI_13" = "MBI_13","MBI_14" = "MBI_14","MBI_15" = "MBI_15",
+                                                                 "MBI_16" = "MBI_16"))
+
+
+# Save for further analysis
+write_csv2(data2, "Generated Data/freq_count.csv")
+write_csv2(datax, "Generated Data/Matched_freq_count.csv")
+
+######  5. Session info #########################################################
+sessionInfo()
+
+
+
+
+#####################################  END  ####################################
