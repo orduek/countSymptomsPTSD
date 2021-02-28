@@ -32,19 +32,19 @@
 # if(!require("lavaan")) install.packages("lavaan")
 # if(!require("psych")) install.packages("psych")
 # if(!require("GPArotation")) install.packages("GPArotation")
-source('//home/or/countSymptomsPTSD/utils.r') # import local functions
+source('/home/or/countSymptomsPTSD/utils.r') # import local functions
 if(!require("gt")) install.packages("gt")
 
 ###### 2. Import and prepare data ############################################
 
 ###### 2.1 Import
 # Create new data frame
-datax <- read_delim("/home/or/countSymptomsPTSD/Generated_Data/Matched_freq_countPTSD.csv", 
+datax <- read_delim("/home/or/countSymptomsPTSD/Generated_Data/Matched_freq_countPHQ.csv", 
                    ";", escape_double = FALSE, trim_ws = TRUE)
 
 ###### 2.2 Training and testing data
 
-allDatas <- splitDat(datax = datax, begin = "PCLN01", end = "PCLN20")
+allDatas <- splitDat(datax = datax, begin = "PHQN01", end = "PHQN09")
 ###### 3. Descriptive ########################################################
 
 summary(datax)
@@ -59,7 +59,7 @@ summary(allDatas[["data_test"]])
 #cut_1 <- efa_run(cutPoint = allDatas[["Splits_percentage"]][1], datay_train = allDatas[["datay_train"]])
 
 ###### 4.2.2 Median Split  ##########################################################
-
+print("RUNNING")
 # Define used sample
 cut_2 <- efa_run(cutPoint = allDatas[["Splits_percentage"]][2], datay_train = allDatas[["datay_train"]])
 # Safe of EFA 
@@ -112,47 +112,31 @@ FULL <- EFA_top_specific$loadings
 
 ###### 4.2.5 All models  ##########################################################
 
-#print(CUT1_t, cutoff = 0.5) #None
-#print(CUT1_l, cutoff = 0.5) #None
+# print(CUT1_t, cutoff = 0.5) #None
+# print(CUT1_l, cutoff = 0.5) #None
 
-print(CUT2_t, cutoff = 0.5) #8 factors
-print(CUT2_l, cutoff = 0.5) #8 factors
+print(CUT2_t, cutoff = 0.5) #4 factors
+print(CUT2_l, cutoff = 0.5) #4 factors
 
-print(CUT3_t, cutoff = 0.5) #8 factors
-print(CUT3_l, cutoff = 0.5) #7
+print(CUT3_t, cutoff = 0.5) #4 factors
+print(CUT3_l, cutoff = 0.5) #4
 
-print(FULL, cutoff = 0.2)   #8 factor model 
+print(FULL, cutoff = 0.2)   #4 factor model 
 
 ###### 4.3 Extracted factor models  #################################################
 
-model_CUT1_t<- ' A=~ PCLN12 + PCLN13 + PCLN14
-                 B=~ PCLN01+PCLN02+PCLN03
-                 C=~ PCLN09 + PCLN10 + PCLN11
-                 D=~ PCLN17 + PCLN18
-                 E=~ PCLN19
-                 F=~ PCLN06 + PCLN07
-                 G=~ PCLN04 + PCLN05
-                 H=~ PCLN16
+model_CUT2_t<- ' A=~ PHQN03 + PHQN04 + PHQN05
+                 B=~ PHQN01 + PHQN02 
 '
-# PCL 8 exclued
+# PHQ 6, 7, 8, 9 omitted
 
-model_DSM5_PCL <- '
-      Rexp =~ PCLN01 + PCLN02 + PCLN03 + PCLN04 + PCLN05
-      Av =~ PCLN06 + PCLN07
-      An =~ PCLN08 + PCLN09 + PCLN10 + PCLN11 + PCLN12 + PCLN13 + PCLN14 
-      Hyper =~ PCLN15 + PCLN16 + PCLN17 + PCLN18 + PCLN19 + PCLN20'
-
-model_7factor <- '
-    Rexp =~ PCLN01 + PCLN02 + PCLN03 + PCLN04 + PCLN05
-    Av =~ PCLN06 + PCLN07
-    Na =~ PCLN08 + PCLN09 + PCLN10 + PCLN11
-    An =~ PCLN12 + PCLN13 + PCLN14
-    EB =~ PCLN15 + PCLN16
-    AA =~ PCLN17 + PCLN18
-    DA =~ PCLN19 + PCLN20
+model_FULL <- '
+    A =~ PHQN03 + PHQN04 + PHQN05 
+    B =~ PHQN02 + PHQN06 + PHQN09
+    C =~ PHQN07 + PHQN08
+    D =~ PHQN01
 '
-
-
+# PHQ 1
 ###### 5. CFA  #####################################################################
 
 # Simulation conditions
@@ -165,12 +149,12 @@ model_7factor <- '
 ###### 5.1.2 Median ################################################
 
 Res_1CUT_Median <- simConditions(nIter = 5, freqCut = allDatas$Splits_percentage[2], 
-                                 data_test = allDatas$data_test, model = model_CUT1_t)
+                                 data_test = allDatas$data_test, model = model_CUT2_t)
 
 ###### 5.1.3 80/20 ################################################
 
 Res_1CUT_8020 <- simConditions(nIter = 5, freqCut = allDatas$Splits_percentage[3], 
-                               data_test = allDatas$data_test, model = model_CUT1_t) 
+                               data_test = allDatas$data_test, model = model_CUT2_t) 
 
 
 ###### 5.2 DSM-5 factor Model ################################################
@@ -178,39 +162,25 @@ Res_1CUT_8020 <- simConditions(nIter = 5, freqCut = allDatas$Splits_percentage[3
 ###### 5.2.1 20/80 ################################################
 # not relevant for PTSD
 ###### 5.2.2 Median ################################################
-Res_Theory_Median <- simConditions(nIter = 5, freqCut = allDatas$Splits_percentage[2], 
-                                   data_test = allDatas$data_test, model = model_DSM5_PCL)
+Res_FULL_Median <- simConditions(nIter = 5, freqCut = allDatas$Splits_percentage[2], 
+                                   data_test = allDatas$data_test, model = model_FULL)
 
 ###### 5.2.3 80/20 ################################################
-Res_Theory_8020 <- simConditions(nIter = 5, freqCut = allDatas$Splits_percentage[3], 
-                                 data_test = allDatas$data_test, model = model_DSM5_PCL)
-###### 5.3 MBI 3 factor Model ################################################
-model_Factor <- model_7factor
-
-###### 5.3.1 20/80 ################################################
-# not relevant for PTSD
-###### 5.3.2 Median ################################################
-Res_FULL_Median <- simConditions(nIter = 5, freqCut = allDatas$Splits_percentage[2], 
-                                 data_test = allDatas$data_test, model = model_7factor)
-
-###### 5.3.3 80/20 ################################################
 Res_FULL_8020 <- simConditions(nIter = 5, freqCut = allDatas$Splits_percentage[3], 
-                               data_test = allDatas$data_test, model = model_CUT1_t)
+                                 data_test = allDatas$data_test, model = model_FULL)
 
 
 ###### 5.4 Factor Model Results ################################################
 #Res_1CUT_2080
-library(kableExtra)
-save_kable(knitr::kable(Res_1CUT_Median, digits=3, align = 'c'), density = 600, file = "Res2CUT_MedianPTSD.png")
-save_kable(knitr::kable(Res_1CUT_8020, digits=3, align = 'c'), density = 600, file = "Res2CUT_8020PTSD.png")
 
-#Res_Theory_2080
-save_kable(knitr::kable(Res_Theory_Median, digits=3, align = 'c'), density = 600, file = "ResTheory_MedianPTSD.png")
-save_kable(knitr::kable(Res_Theory_8020, digits=3, align = 'c'), density = 600, file = "ResTheory_8020PTSD.png")
 
-#Res_FULL_2080
-flextable(Res_FULL_Median)
-flextable(Res_FULL_8020)
+knitr::kable(Res_1CUT_Median, digits = 3)#, labels = labels)
+knitr::kable(Res_1CUT_8020, digits = 3)
+
+#Res_FULL
+flextable(Res_Theory_Median)
+flextable(Res_Theory_8020)
+
 ###### 5.4.1 Q1 ################################################
 # Does the factor model derived in the top 20% fit in the remaining population? -> "ok"
 #Res_1CUT_2080[8,] #CFI 0.94, #RMSEA 0.08

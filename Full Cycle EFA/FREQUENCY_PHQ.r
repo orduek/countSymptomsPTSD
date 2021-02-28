@@ -36,11 +36,11 @@ source('/home/or/countSymptomsPTSD/utils.r') # import local functions
 
 ###### 2.1 Import
 # Create new data frame
-datax <- read_delim("/home/or/countSymptomsPTSD/Generated_Data/Matched_freq_countPTSD.csv", 
+datax <- read_delim("/home/or/countSymptomsPTSD/Generated_Data/Matched_freq_countPHQ.csv", 
                     ";", escape_double = FALSE, trim_ws = TRUE)
 
 ###### 2.2 Training and testing data
-allDatas <- splitDat(datax = datax, begin = "PCLN01", end = "PCLN20")
+allDatas <- splitDat(datax = datax, begin = "PHQN01", end = "PHQN09")
 ###### 3. Descriptive ########################################################
 
 summary(datax)
@@ -113,46 +113,31 @@ FULL <- EFA_top_specific$loadings
 
 ###### 4.2.5 All models  ##########################################################
 
-print(CUT1_t, cutoff = 0.3) #8 factors
-print(CUT1_l, cutoff = 0.3) #7 factors
+print(CUT1_t, cutoff = 0.3) #4 factors
+print(CUT1_l, cutoff = 0.3) #4 factors
 
-print(CUT2_t, cutoff = 0.3) #8 factors
-print(CUT2_l, cutoff = 0.3) #7 factors
+print(CUT2_t, cutoff = 0.3) #4 factors
+print(CUT2_l, cutoff = 0.3) #3 factors
 
-print(CUT3_t, cutoff = 0.5) #8 factors
-print(CUT3_l, cutoff = 0.5) #7
+print(CUT3_t, cutoff = 0.5) #4 factors
+print(CUT3_l, cutoff = 0.5) #1
 
-print(FULL, cutoff = 0.2)   #7 factor model 
+print(FULL, cutoff = 0.2)   #4 factor model 
 
 ###### 4.3 Extracted factor models  #################################################
 
-model_CUT1_t<- ' A=~ PCLN12 + PCLN13 + PCLN14
-                 B=~ PCLN01+PCLN02+PCLN03
-                 C=~ PCLN09 + PCLN10 + PCLN11
-                 D=~ PCLN17 + PCLN18
-                 E=~ PCLN19
-                 F=~ PCLN06 + PCLN07
-                 G=~ PCLN04 + PCLN05
-                 H=~ PCLN08 + PCLN15 + PCLN16
-'
-# 
-
-model_DSM5_PCL <- '
-      Rexp =~ PCLN01 + PCLN02 + PCLN03 + PCLN04 + PCLN05
-      Av =~ PCLN06 + PCLN07
-      An =~ PCLN08 + PCLN09 + PCLN10 + PCLN11 + PCLN12 + PCLN13 + PCLN14 
-      Hyper =~ PCLN15 + PCLN16 + PCLN17 + PCLN18 + PCLN19 + PCLN20'
-
-model_7factor <- '
-    Rexp =~ PCLN01 + PCLN02 + PCLN03 + PCLN04 + PCLN05
-    Av =~ PCLN06 + PCLN07
-    Na =~ PCLN08 + PCLN09 + PCLN10 + PCLN11
-    An =~ PCLN12 + PCLN13 + PCLN14
-    EB =~ PCLN15 + PCLN16
-    AA =~ PCLN17 + PCLN18
-    DA =~ PCLN19 + PCLN20
+model_CUT1_t<- ' A=~ PHQN03 + PHQN04 + PHQN05
+                 B=~ PHQN02 + PHQN06 + PHQN09
+                 C=~ PHQN07 + PHQN08 
 '
 
+
+model_FULL <- '
+    A =~ PHQN03 + PHQN04 + PHQN05 
+    B =~ PHQN02 + PHQN06 + PHQN09
+    C =~ PHQN07 + PHQN08
+'
+# phq1 excluded
 ###### 5. CFA  #####################################################################
 
 # Simulation conditions
@@ -164,6 +149,7 @@ model <- model_CUT1_t
 Res_1CUT_2080 <- simConditions(nIter = 5, freqCut = allDatas$Splits_frequency[1], 
                                data_test = allDatas$data_test, model = model_CUT1_t)
 
+# not convulving
 
 ###### 5.1.2 Freq= 2 ################################################
 
@@ -216,12 +202,9 @@ Res_FULL_8020 <- simConditions(nIter = 5, freqCut = allDatas$Splits_frequency[3]
                                data_test = allDatas$data_test, model = model_7factor)
 
 ###### 5.4 Factor Model Results ################################################
-save_kable(kable_styling(knitr::kable(Res_1CUT_2080, digits=3, align = 'c')), density = 600, file = "ResTheory_1CUT_2080_freq.png")
-save_kable(kable_styling(knitr::kable(Res_1CUT_Median, digits=3, align = 'c')), density = 600, file = "ResTheory_1CUT_Median_freq.png")
-save_kable(kable_styling(knitr::kable(Res_1CUT_8020, digits=3, align = 'c')), density = 600, file = "ResTheory_1CUT_8020_freq.png")
-
-
-
+Res_1CUT_2080
+Res_1CUT_Median
+Res_1CUT_8020
 
 Res_Theory_2080
 Res_Theory_Median

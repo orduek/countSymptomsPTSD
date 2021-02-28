@@ -126,7 +126,8 @@ sum(datax$freq> 100) #35844
 sum(datax$freq> 100)/nrow(datax) # 0.681
 
 ## Endorsed Top 10 frequencies
-top_10 <- (data2_counted$freq[1:10])
+data2_counted <- ordered(data2_counted$freq, decreasing = F)
+top_10 <- data2_counted$freq[1:10]
 cut_min_top_10 <- min(top_10)
 
 sum(datax$freq>= cut_min_top_10) #31634

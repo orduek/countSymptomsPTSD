@@ -26,8 +26,11 @@ countFreqGeneral <- function(data2_counted) {
   ## Endorsed only once
   Number_Endorsed_Once <- sum(data2_counted$freq==1) #6479
   
-  ## Endorsed <= 2
-  Number_Endorsed_Twice <- sum(data2_counted$freq<= 2) #7207
+  ## Endorsed <= 5
+  Number_Endorsed_Five <- sum(data2_counted$freq<= 5) #7207
+  
+  ## Endorsed <= 50
+  Number_Endorsed_Less50 <- sum(data2_counted$freq<= 50) #8139
   
   ## Endorsed <= 100
   Number_Endorsed_Less100 <- sum(data2_counted$freq<= 100) #8139
@@ -39,8 +42,8 @@ countFreqGeneral <- function(data2_counted) {
   Number_MostCommon <- max(data2_counted$freq) #20575
   
   ####
-  df <- data.frame(TotalProfiles, Number_Endorsed_Once, Number_Endorsed_Twice, Number_Endorsed_Less100,
-                   Endorsed_Higher_100,Number_MostCommon)
+  df <- data.frame(TotalProfiles, Number_Endorsed_Once, Number_Endorsed_Five,Number_Endorsed_Less50,
+                   Number_Endorsed_Less100, Endorsed_Higher_100,Number_MostCommon)
   ## Assess the symptom profiles
   data2_counted <- data2_counted %>% 
     arrange(desc(freq))
@@ -80,6 +83,7 @@ countFreq_Ind <- function(datax) {
   Endorsed_More100Per <- sum(datax$freq> 100)/nrow(datax) # 0.681
   
   ## Endorsed Top 10 frequencies
+  data2_counted <- arrange(data2_counted, desc(freq))
   top_10 <- (data2_counted$freq[1:10])
   cut_min_top_10 <- min(top_10)
   
@@ -142,7 +146,7 @@ splitDat <- function(datax, begin, end) {
   
   # Prepare dataset for further analysis
   datay_train <- data_train %>% 
-    select(PCLN01:PCLN20, freq)
+    select(begin:end, freq)
   
   dataz_train <- datay_train %>% 
     select(- freq)
