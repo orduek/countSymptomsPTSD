@@ -187,7 +187,7 @@ results[2,8] <- eigen_low$cumulative.variance.percent[5]
 ######    4.2.2.1 Top ###############################################################
 # Preprocess
 data_top <- datay %>% 
-  filter(freq > Splits_percentage[2]) %>% 
+  filter(freq >= Splits_percentage[2]) %>% 
   select(-freq)
 results[3,3] <- nrow(data_top)
 
@@ -206,7 +206,7 @@ results[3,8] <- eigen_top$cumulative.variance.percent[5]
 ######    4.2.2.2 Low ###############################################################
 # Preprocess
 data_low <- datay %>% 
-  filter(freq <= Splits_percentage[2]) %>% 
+  filter(freq < Splits_percentage[2]) %>% 
   select(-freq)
 results[4,3] <- nrow(data_low)
 
