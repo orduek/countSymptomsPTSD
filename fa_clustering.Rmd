@@ -18,8 +18,7 @@ require(psych)
 ```
 
 ```{r, echo=FALSE}
-dfPCL5 <- read.spss('/home/or/Documents/pcl5_vaData/pcl5_100k/PCL5_130K_FY19.sav', to.data.frame = TRUE)
-
+dfPCL5 <- read.spss('/home/or/Documents/pcl5_vaData/phq_pcl_19/PCLpct19.sav', to.data.frame = TRUE)
 dfPCL5 <- dfPCL5[,5:24]
 dfPCL5 <- na.omit(dfPCL5)
 ```
