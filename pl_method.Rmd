@@ -292,7 +292,7 @@ biplot(fit)
 
 ```{r}
 # PCA Variable Factor Map
-fit2 <- PCA(dfPCL5) # graphs generated automatically
+fit2 <- PCA(datax_top[,0:20]) # graphs generated automatically
 get_eig(fit2)
 # Visualize eigenvalues/variances
 fviz_screeplot(fit2, addlabels = TRUE, ylim = c(0, 50))

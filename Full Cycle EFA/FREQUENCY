@@ -20,7 +20,7 @@
 #----- 4. EFA  --------------------------------------------------------------#
 #----- 5. CFA  --------------------------------------------------------------#
 #-----  5.1 Define factor structure -----------------------------------------#
-#-----  4.2 Function (data split + factor estimation) -----------------------#
+#-----  5.2 Function (data split + factor estimation) -----------------------#
 
 ## General Notes ##
 # datax = dataframe script one with scores, binarized items and frequency profiles
