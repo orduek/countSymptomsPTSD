@@ -68,12 +68,12 @@ datax <- read_delim("Analysis/PHQ9/Generated Data/Matched_freq_count.csv",
 ###### 3. Descriptive #######################################################
 ## Datax
 summary(datax)
-nrow(datax)  #sample size
+nrow(datax)  # 165397
 
 # Summed severity
 hist(datax$total)
-mean(datax$total)
-sd(datax$total)
+mean(datax$total) # 13.38
+sd(datax$total) # 6.83
 
 # Summed severity of non-binarized items
 hist(datax$total_bin)
@@ -127,7 +127,7 @@ nrow(data2_low_counted) # 1703
 
 ## Number of endorsements of most common phenotype
 max(data2_low_counted$freq) # 777
-
+summary(data2_low_counted$freq)
 ######   5.1.2 Jaccard-Index  ################################################
 data_jacc_dist <- dist(data2_low, method = "binary")
 data_jacc_index <- 1-data_jacc_dist
@@ -141,7 +141,7 @@ freq1_top  <- data2_low_counted %>%
   select(freq) %>% 
   arrange(-freq)
 
-pdf("Analysis/PHQ9/Images/LOW_Phenotypes_PHQ9.pdf", width=8, height=8)
+pdf("Images/LOW_Phenotypes_PHQ9.pdf", width=8, height=8)
 ggplot(freq1_top, aes(x=as.factor(1:nrow(freq1_top)),y=freq)) +
   geom_bar(stat = "identity",fill = "grey26") +
   scale_y_continuous(expand = expansion(mult = c(0, 0.05))) +
@@ -162,7 +162,7 @@ nrow(data2_med_counted) # 3265
 
 ## Number of endorsements of most common phenotype
 max(data2_med_counted$freq) # 90
-
+summary(data2_med_counted$freq)
 ######   5.2.2 Jaccard-Index  ################################################
 data_jacc_dist <- dist(data2_med, method = "binary")
 data_jacc_index <- 1-data_jacc_dist
@@ -176,7 +176,7 @@ freq1_top  <- data2_med_counted %>%
   select(freq) %>% 
   arrange(-freq)
 
-pdf("Analysis/PHQ9/Images/med_Phenotypes_PHQ9.pdf", width=8, height=8)
+pdf("Images/med_Phenotypes_PHQ9.pdf", width=8, height=8)
 ggplot(freq1_top, aes(x=as.factor(1:nrow(freq1_top)),y=freq)) +
   geom_bar(stat = "identity",fill = "grey26") +
   scale_y_continuous(expand = expansion(mult = c(0, 0.05))) +
@@ -196,7 +196,7 @@ nrow(data2_high_counted) # 2039
 
 ## Number of endorsements of most common phenotype
 max(data2_high_counted$freq) # 94
-
+summary(data2_high_counted$freq)
 ######   5.3.2 Jaccard-Index  ################################################
 data_jacc_dist <- dist(data2_high, method = "binary")
 data_jacc_index <- 1-data_jacc_dist
@@ -210,7 +210,7 @@ freq1_top  <- data2_high_counted %>%
   select(freq) %>% 
   arrange(-freq)
 
-pdf("Analysis/PHQ9/Images/high_Phenotypes_PHQ9.pdf", width=8, height=8)
+pdf("Images/high_Phenotypes_PHQ9.pdf", width=8, height=8)
 ggplot(freq1_top, aes(x=as.factor(1:nrow(freq1_top)),y=freq)) +
   geom_bar(stat = "identity",fill = "grey26") +
   scale_y_continuous(expand = expansion(mult = c(0, 0.05))) +
@@ -242,7 +242,7 @@ m_pl$pars # 2.37
 bs_p = bootstrap_p(m_pl, no_of_sims = 5000, threads = 5, seed = 241)
 bs_p$p # 0.801
 
-pdf("Analysis/PHQ9/Images/LOW_PL_parameters_boot_PHQ9.pdf", width=8, height=8)
+pdf("Images/LOW_PL_parameters_boot_PHQ9.pdf", width=8, height=8)
 plot(bs_p)
 dev.off() 
 
@@ -268,20 +268,20 @@ compare_distributions(m_ln_EQ, m_pl)$p_one_sided #   p < 0.43 -> m_pl better fit
 
 ######  6.2 Medium ##############################################################
 #### Prepare
-Distribution <- data2_med_counted$freq
+Distribution <- data2_med_counted$freq[data2_med_counted$freq > 7]
 ### Power Law
 m_pl = displ$new(Distribution)
 est_pl = estimate_xmin(m_pl)
 m_pl$setXmin(est_pl)
 
 # Estimated Parameters
-m_pl$xmin # 1
-m_pl$pars # 2.06
+m_pl$xmin # 11
+m_pl$pars # 3.16
 
 ## Bootstrap parameters
 ## Test whether power law is possible
-bs_p = bootstrap_p(m_pl, no_of_sims = 5000, threads = 5, seed = 241)
-bs_p$p # 0 - so, not conforming with powerlaw
+bs_p = bootstrap_p(m_pl, no_of_sims = 5000, threads = 5, seed = 242)
+bs_p$p # 0.028 - so, not conforming with powerlaw
 
 pdf("Images/MED_PL_parameters_boot_PHQ9.pdf", width=8, height=8)
 plot(bs_p)
@@ -303,9 +303,9 @@ lines(m_ln_EQ, col = 4,lty = 2, lwd = 2)
 dev.off()
 
 # Formally assess
-compare_distributions(m_pl, m_ln_EQ)$p_two_sided # p < 0.05 -> one of the two has better fit
-compare_distributions(m_pl, m_ln_EQ)$p_one_sided #   p < 0.05 -> m_ln_EQ  better fit
-compare_distributions(m_ln_EQ, m_pl)$p_one_sided #   p < 0.05 -> m_pl better fit
+compare_distributions(m_pl, m_ln_EQ)$p_two_sided # p < 0.48 -> one of the two has better fit
+compare_distributions(m_pl, m_ln_EQ)$p_one_sided #   p < 0.75 -> m_ln_EQ  better fit
+compare_distributions(m_ln_EQ, m_pl)$p_one_sided #   p < 0.24 -> m_pl better fit
 
 ######  6.3 High ##############################################################
 #### Prepare
@@ -316,15 +316,15 @@ est_pl = estimate_xmin(m_pl)
 m_pl$setXmin(est_pl)
 
 # Estimated Parameters
-m_pl$xmin # Xmin
-m_pl$pars # alpha
+m_pl$xmin # 9
+m_pl$pars # 2.66
 
 ## Bootstrap parameters
 ## Test whether power law is possible
-#bs_p = bootstrap_p(m_pl, no_of_sims = 5000, threads = 5, seed = 241)
-bs_p$p
+bs_p = bootstrap_p(m_pl, no_of_sims = 5000, threads = 5, seed = 241)
+bs_p$p # 0.22
 
-pdf("Images/HIGH_PL_parameters_boot.pdf", width=8, height=8)
+pdf("Images/HIGH_PL_parameters_boot_PHQ9.pdf", width=8, height=8)
 plot(bs_p)
 dev.off() 
 
@@ -337,16 +337,16 @@ m_ln_EQ$setPars(est_m_ln_EQ)
 
 # Plot different distributions
 options(scipen=5)
-pdf("Images/HIGH_PL.pdf", width=8, height=8)
+pdf("Images/HIGH_PL_PHQ9.pdf", width=8, height=8)
 plot(m_pl, xlab = "", ylab="CDF",panel.first = grid(col = "grey80"))
 lines(m_pl, col = 2,lty = 1, lwd = 2) 
 lines(m_ln_EQ, col = 4,lty = 2, lwd = 2) 
 dev.off()
 
 # Formally assess
-compare_distributions(m_pl, m_ln_EQ)$p_two_sided # p < 0.05 -> one of the two has better fit
-compare_distributions(m_pl, m_ln_EQ)$p_one_sided #   p < 0.05 -> m_ln_EQ  better fit
-compare_distributions(m_ln_EQ, m_pl)$p_one_sided #   p < 0.05 -> m_pl better fit
+compare_distributions(m_pl, m_ln_EQ)$p_two_sided # p < 0.13 -> one of the two has better fit
+compare_distributions(m_pl, m_ln_EQ)$p_one_sided #   p < 0.93 -> m_ln_EQ  better fit
+compare_distributions(m_ln_EQ, m_pl)$p_one_sided #   p < 0.06 -> m_pl better fit
 
 
 ######  7. Session info #########################################################

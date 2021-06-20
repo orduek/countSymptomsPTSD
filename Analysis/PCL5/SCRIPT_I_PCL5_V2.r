@@ -63,11 +63,13 @@ dfPCL5$totalPCL <- dfPCL5$PCLN01 + dfPCL5$PCLN02 + dfPCL5$PCLN03 + dfPCL5$PCLN04
 
 dfPCL5$FEMALE
 mean(dfPCL5$AGE_OCT01)
+summary(dfPCL5$AGE_OCT01)
 sd(dfPCL5$AGE_OCT01)
 mean(dfPCL5$totalPCL)
 sd(dfPCL5$totalPCL)
 hist(dfPCL5$totalPCL)
-
+summary(dfPCL5$totalPCL)
+table(dfPCL5$MALE)
 ###### 2.1 Select variables for methods and materials // DATA0
 data0 <- dfPCL5 %>% # xxxxx = dataset after cleaning before selection
   select("AGE_OCT01", "FEMALE", "totalPCL") #include age, sex, variables of interest

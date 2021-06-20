@@ -103,7 +103,7 @@ freq1_top  <- data2_counted %>%
   select(freq)
 
 # The frequency of the fifty most common symptom combinations
-pdf("Top_100_Phenotypes_PHQ9.pdf", width=8, height=8)
+pdf("Images/Top_100_Phenotypes_PHQ9.pdf", width=8, height=8)
 ggplot(freq1_top, aes(x=as.factor(1:nrow(freq1_top)),y=freq)) +
   geom_hline(yintercept = c((median(datax$freq)), (max(freq1_top$freq))), color = "grey", size = 0.3) + #max and median
   geom_bar(stat = "identity",fill = "grey26") +
@@ -147,7 +147,7 @@ m_ln_EQ$setPars(est_m_ln_EQ)
 
 # Plot different distributions
 options(scipen=5)
-pdf("PL_ML_CDF_equal_Xmin_PHQ9.pdf", width=8, height=8)
+pdf("Images/PL_ML_CDF_equal_Xmin_PHQ9.pdf", width=8, height=8)
 plot(m_pl, xlab = "", ylab="CDF",panel.first = grid(col = "grey80"))
 lines(m_pl, col = 2,lty = 1, lwd = 2) 
 lines(m_ln_EQ, col = 4,lty = 2, lwd = 2) 

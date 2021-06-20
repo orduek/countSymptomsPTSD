@@ -46,7 +46,8 @@ load("Raw Data/freq1_top_DASS.RData")
 
 #### Individual Figures
 ##PANSS
-q1 <-ggplot(freq1_top_MBI, aes(x=as.factor(1:nrow(freq1_top_MBI)),y=freq)) +
+load('Analysis/PANSS/Generated Data/freq1_top_PANSS.RData')
+q1 <-ggplot(freq1_top_PANSS, aes(x=as.factor(1:nrow(freq1_top_PANSS)),y=freq)) +
   geom_bar(stat = "identity",fill = "grey26") +
   scale_y_continuous(expand = expansion(mult = c(0, 0.05))) +
   xlab(" ") + 
@@ -62,7 +63,8 @@ q1<- ggdraw(q1) +
   draw_label("    Draft", color = "#C0A0A0", size = 50, angle = 45)
   
 ##PCL
-q2 <- ggplot(freq1_top_DASS, aes(x=as.factor(1:nrow(freq1_top_DASS)),y=freq)) +
+load('Analysis/PCL5/Generated_Data/freq1_top_PCL.RData')
+q2 <- ggplot(freq1_top_PCL, aes(x=as.factor(1:nrow(freq1_top_PCL)),y=freq)) +
   geom_bar(stat = "identity",fill = "grey26") +
   scale_y_continuous(expand = expansion(mult = c(0, 0.05))) +
   xlab("Phenotypes") + 
@@ -104,7 +106,8 @@ q4 <-ggplot(freq1_top_MBI, aes(x=as.factor(1:nrow(freq1_top_MBI)),y=freq)) +
     axis.ticks = element_blank())
 
 ##PHQ
-q5 <-ggplot(freq1_top_MBI, aes(x=as.factor(1:nrow(freq1_top_MBI)),y=freq)) +
+load('Analysis/PHQ9/Generated Data/freq1_top_PHQ9.RData')
+q5 <-ggplot(freq1_top_PHQ, aes(x=as.factor(1:nrow(freq1_top_PHQ)),y=freq)) +
   geom_bar(stat = "identity",fill = "grey26") +
   scale_y_continuous(expand = expansion(mult = c(0, 0.05))) +
   xlab("Phenotypes") + 
@@ -155,17 +158,31 @@ load("Raw Data/res_pl_DASS.RData")
 load("Raw Data/line_pl_DASS.RData")
 load("Raw Data/line_ln_DASS.RData")
 
+## PANSS
+load('Analysis/PANSS/Generated Data/res_pl_PANSS.RData')
+load('Analysis/PANSS/Generated Data/line_pl_PANSS.RData')
+load('Analysis/PANSS/Generated Data/line_ln_PANSS.RData')
+
+## PCL
+load('Analysis/PCL5/Generated_Data/res_pl_PCL.RData')
+load('Analysis/PCL5/Generated_Data/line_pl_PCL.RData')
+load('Analysis/PCL5/Generated_Data/line_ln_PCL.RData')
+
+## PHQ9
+load('Analysis/PHQ9/Generated Data/res_pl_PHQ9.RData')
+load('Analysis/PHQ9/Generated Data/line_pl_PHQ9.RData')
+load('Analysis/PHQ9/Generated Data/line_ln_PHQ9.RData')
 #### Individual Figures
 
 ## PANSS
-p1 <- ggplot(res_pl_MBI, aes(x=x,y=y)) +
+p1 <- ggplot(res_pl_PANSS, aes(x=x,y=y)) +
   geom_point(size = 1)+
   scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),
                 labels = trans_format("log10", math_format(10^.x)))+
   scale_x_log10(breaks = trans_breaks("log10", function(x) 10^x),
                 labels = trans_format("log10", math_format(10^.x)))+
-  geom_line(data = line_pl_MBI, aes(x=x, y=y), color = "red", size = 0.4) +
-  geom_line(data = line_ln_MBI, aes(x=x, y=y), color = "blue", size = 0.4)+
+  geom_line(data = line_pl_PANSS, aes(x=x, y=y), color = "red", size = 0.4) +
+  geom_line(data = line_ln_PANSS, aes(x=x, y=y), color = "blue", size = 0.4)+
   xlab("") + 
   ylab("CDF") +
   ggtitle("PANSS")+
@@ -177,14 +194,14 @@ p1<- ggdraw(p1) +
   draw_label("    Draft", color = "#C0A0A0", size = 50, angle = 45)
 
 ## PCL
-p2 <- ggplot(res_pl_DASS, aes(x=x,y=y)) +
+p2 <- ggplot(res_pl_PCL, aes(x=x,y=y)) +
   geom_point(size = 1)+
   scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),
                 labels = trans_format("log10", math_format(10^.x)))+
   scale_x_log10(breaks = trans_breaks("log10", function(x) 10^x),
                 labels = trans_format("log10", math_format(10^.x)))+
-  geom_line(data = line_pl_DASS, aes(x=x, y=y), color = "red", size = 0.4) +
-  geom_line(data = line_ln_DASS, aes(x=x, y=y), color = "blue", size = 0.4) +
+  geom_line(data = line_pl_PCL, aes(x=x, y=y), color = "red", size = 0.4) +
+  geom_line(data = line_ln_PCL, aes(x=x, y=y), color = "blue", size = 0.4) +
   xlab("Freq") + 
   ylab("") +
   ggtitle("PCL")+
@@ -228,14 +245,14 @@ p4 <- ggplot(res_pl_MBI, aes(x=x,y=y)) +
   background_grid() 
 
 ## PHQ
-p5 <- ggplot(res_pl_MBI, aes(x=x,y=y)) +
+p5 <- ggplot(res_pl_PHQ, aes(x=x,y=y)) +
   geom_point(size = 1)+
   scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),
                 labels = trans_format("log10", math_format(10^.x)))+
   scale_x_log10(breaks = trans_breaks("log10", function(x) 10^x),
                 labels = trans_format("log10", math_format(10^.x)))+
-  geom_line(data = line_pl_MBI, aes(x=x, y=y), color = "red", size = 0.4) +
-  geom_line(data = line_ln_MBI, aes(x=x, y=y), color = "blue", size = 0.4)+
+  geom_line(data = line_pl_PHQ, aes(x=x, y=y), color = "red", size = 0.4) +
+  geom_line(data = line_ln_PHQ, aes(x=x, y=y), color = "blue", size = 0.4)+
   xlab("Freq") + 
   ylab("") +
   ggtitle("PHQ")+
@@ -247,23 +264,23 @@ p5<- ggdraw(p5) +
   draw_label("    Draft", color = "#C0A0A0", size = 50, angle = 45)
 
 ## GAD
-p6 <- ggplot(res_pl_MBI, aes(x=x,y=y)) +
-  geom_point(size = 1)+
-  scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),
-                labels = trans_format("log10", math_format(10^.x)))+
-  scale_x_log10(breaks = trans_breaks("log10", function(x) 10^x),
-                labels = trans_format("log10", math_format(10^.x)))+
-  geom_line(data = line_pl_MBI, aes(x=x, y=y), color = "red", size = 0.4) +
-  geom_line(data = line_ln_MBI, aes(x=x, y=y), color = "blue", size = 0.4)+
-  xlab("") + 
-  ylab("") +
-  ggtitle("GAD")+
-  theme_half_open(12)+
-  panel_border(color = "black", size = 0.4, linetype = 1, remove = FALSE)+
-  background_grid() 
-
-p6<- ggdraw(p6) + 
-  draw_label("    Draft", color = "#C0A0A0", size = 50, angle = 45)
+# p6 <- ggplot(res_pl_MBI, aes(x=x,y=y)) +
+#   geom_point(size = 1)+
+#   scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),
+#                 labels = trans_format("log10", math_format(10^.x)))+
+#   scale_x_log10(breaks = trans_breaks("log10", function(x) 10^x),
+#                 labels = trans_format("log10", math_format(10^.x)))+
+#   geom_line(data = line_pl_MBI, aes(x=x, y=y), color = "red", size = 0.4) +
+#   geom_line(data = line_ln_MBI, aes(x=x, y=y), color = "blue", size = 0.4)+
+#   xlab("") + 
+#   ylab("") +
+#   ggtitle("GAD")+
+#   theme_half_open(12)+
+#   panel_border(color = "black", size = 0.4, linetype = 1, remove = FALSE)+
+#   background_grid() 
+# 
+# p6<- ggdraw(p6) + 
+#   draw_label("    Draft", color = "#C0A0A0", size = 50, angle = 45)
 
 ###### 4. FIGURE 1 FULL #########################################################
 pdf("Figure_1_FULL.pdf", width=8, height=12)
