@@ -96,6 +96,15 @@ data_jacc_index <- 1-data_jacc_dist
 summary(data_jacc_index) # median = 0.789, q1-q3 [0.72, 0.869]
 hist(data_jacc_index)
 
+### Jaccard truncated#####
+truncDat <- filter(datax, freq <=16) # using median frequency
+truncDat <- truncDat[,16:29] # take only the binarized questionnaires
+data_jacc_dist <- dist(truncDat, method = "binary")
+data_jacc_index <- 1-data_jacc_dist
+
+summary(data_jacc_index) # median = 0.250, q1-q3 [0.143, 0.375]
+hist(data_jacc_index)
+
 ######  4.3 Plot the phenotypes distribution #################################
 ### 4.3.1 Plot the 100 most common phenotypes
 freq1_top  <- data2_counted %>% 

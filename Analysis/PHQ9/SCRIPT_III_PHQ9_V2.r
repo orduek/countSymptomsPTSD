@@ -280,8 +280,8 @@ m_pl$pars # 3.16
 
 ## Bootstrap parameters
 ## Test whether power law is possible
-bs_p = bootstrap_p(m_pl, no_of_sims = 5000, threads = 5, seed = 242)
-bs_p$p # 0.028 - so, not conforming with powerlaw
+bs_p = bootstrap_p(m_pl, no_of_sims = 5000, threads = 5, seed = 243)
+bs_p$p # 0.03 - so, not conforming with powerlaw
 
 pdf("Images/MED_PL_parameters_boot_PHQ9.pdf", width=8, height=8)
 plot(bs_p)

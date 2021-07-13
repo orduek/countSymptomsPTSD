@@ -87,7 +87,7 @@ print(data2_counted[2,]) #
 print(data2_counted[3,]) # 
 
 ## Median endorsement of phenotypes   ?!?!?!?!?!?!?!?!?
-summary(datax$freq) #
+summary(datax$freq) # median 49
 hist(datax$freq) # plot
 
 ######  4.2 Jaccard-Index  ###################################################
@@ -99,6 +99,15 @@ data_jacc_index <- 1-data_jacc_dist
 
 summary(data_jacc_index) # 
 median(data_jacc_index)
+hist(data_jacc_index)
+
+### Jaccard truncated#####
+truncDat <- filter(datax, freq <=49) # using median frequency
+truncDat <- truncDat[,15:27]
+data_jacc_dist <- dist(truncDat, method = "binary")
+data_jacc_index <- 1-data_jacc_dist
+
+summary(data_jacc_index) # median = 0.33, q1-q3 [0.200, 0.454]
 hist(data_jacc_index)
 
 ######  4.3 Plot the phenotypes distribution #################################
