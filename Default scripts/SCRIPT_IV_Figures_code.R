@@ -40,9 +40,9 @@ if(!require("ggforce")) install.packages("ggforce")
 ###### 2. FIGURE 1A ##############################################################
 #### Import
 ## MBI
-load("Raw Data/freq1_top_MBI.RData")
+load("raw_data/freq1_top_MBI.RData")
 ## DASS
-load("Raw Data/freq1_top_DASS.RData")
+load("raw_data/freq1_top_DASS.RData")
 
 #### Individual Figures
 ##PANSS
@@ -59,8 +59,8 @@ q1 <-ggplot(freq1_top_PANSS, aes(x=as.factor(1:nrow(freq1_top_PANSS)),y=freq)) +
     axis.text.x = element_blank(),
     axis.ticks = element_blank())
 
-q1<- ggdraw(q1) + 
-  draw_label("    Draft", color = "#C0A0A0", size = 50, angle = 45)
+# q1<- ggdraw(q1) + 
+#   draw_label("    Draft", color = "#C0A0A0", size = 50, angle = 45)
   
 ##PCL
 load('Analysis/PCL5/Generated_Data/freq1_top_PCL.RData')
@@ -76,8 +76,8 @@ q2 <- ggplot(freq1_top_PCL, aes(x=as.factor(1:nrow(freq1_top_PCL)),y=freq)) +
     axis.text.x = element_blank(),
     axis.ticks = element_blank())
 
-q2<- ggdraw(q2) + 
-  draw_label("    Draft", color = "#C0A0A0", size = 50, angle = 45)
+# q2<- ggdraw(q2) + 
+#   draw_label("    Draft", color = "#C0A0A0", size = 50, angle = 45)
 
 ##DASS
 q3 <- ggplot(freq1_top_DASS, aes(x=as.factor(1:nrow(freq1_top_DASS)),y=freq)) +
@@ -119,44 +119,44 @@ q5 <-ggplot(freq1_top_PHQ, aes(x=as.factor(1:nrow(freq1_top_PHQ)),y=freq)) +
     axis.text.x = element_blank(),
     axis.ticks = element_blank())
 
-q5<- ggdraw(q5) + 
-  draw_label("    Draft", color = "#C0A0A0", size = 50, angle = 45)
+# q5<- ggdraw(q5) + 
+#   draw_label("    Draft", color = "#C0A0A0", size = 50, angle = 45)
 
 ##DASS
-q6 <- ggplot(freq1_top_DASS, aes(x=as.factor(1:nrow(freq1_top_DASS)),y=freq)) +
-  geom_bar(stat = "identity",fill = "grey26") +
-  scale_y_continuous(expand = expansion(mult = c(0, 0.05))) +
-  xlab(" ") + 
-  ylab("") +
-  ggtitle("GAD")+
-  theme_minimal_hgrid() +
-  panel_border(color = "black", size = 0.4, linetype = 1, remove = FALSE)+
-  theme(
-    axis.text.x = element_blank(),
-    axis.ticks = element_blank())
+# q6 <- ggplot(freq1_top_DASS, aes(x=as.factor(1:nrow(freq1_top_DASS)),y=freq)) +
+#   geom_bar(stat = "identity",fill = "grey26") +
+#   scale_y_continuous(expand = expansion(mult = c(0, 0.05))) +
+#   xlab(" ") + 
+#   ylab("") +
+#   ggtitle("GAD")+
+#   theme_minimal_hgrid() +
+#   panel_border(color = "black", size = 0.4, linetype = 1, remove = FALSE)+
+#   theme(
+#     axis.text.x = element_blank(),
+#     axis.ticks = element_blank())
 
-q6<- ggdraw(q6) + 
-  draw_label("    Draft", color = "#C0A0A0", size = 50, angle = 45)
+# q6<- ggdraw(q6) + 
+#   draw_label("    Draft", color = "#C0A0A0", size = 50, angle = 45)
 
 #### Panel
 # Cow Plot
-#pdf("Figure_1B.pdf", width=8, height=8)
-plot_grid(q1, q2, q3, q4, q5, q6, labels=c("A", "B", "C", "D", "E", "F"), ncol = 3, nrow = 2)
-#dev.off()
+pdf("Figure_1B.pdf", width=8, height=8)
+plot_grid(q1, q2, q3, q4, q5, labels=c("A", "B", "C", "D", "E"), ncol = 3, nrow = 2)
+dev.off()
 
 
 
 ###### 3. FIGURE 1B ##############################################################
 #### Import
 ## MBI
-load("Raw Data/res_pl_MBI.RData")
-load("Raw Data/line_pl_MBI.RData")
-load("Raw Data/line_ln_MBI.RData")
+load("raw_data/res_pl_MBI.RData")
+load("raw_data/line_pl_MBI.RData")
+load("raw_data/line_ln_MBI.RData")
 
 ## DASS
-load("Raw Data/res_pl_DASS.RData")
-load("Raw Data/line_pl_DASS.RData")
-load("Raw Data/line_ln_DASS.RData")
+load("raw_data/res_pl_DASS.RData")
+load("raw_data/line_pl_DASS.RData")
+load("raw_data/line_ln_DASS.RData")
 
 ## PANSS
 load('Analysis/PANSS/Generated Data/res_pl_PANSS.RData')
@@ -190,8 +190,8 @@ p1 <- ggplot(res_pl_PANSS, aes(x=x,y=y)) +
   panel_border(color = "black", size = 0.4, linetype = 1, remove = FALSE)+
   background_grid() 
 
-p1<- ggdraw(p1) + 
-  draw_label("    Draft", color = "#C0A0A0", size = 50, angle = 45)
+# p1<- ggdraw(p1) + 
+#   draw_label("    Draft", color = "#C0A0A0", size = 50, angle = 45)
 
 ## PCL
 p2 <- ggplot(res_pl_PCL, aes(x=x,y=y)) +
@@ -209,8 +209,8 @@ p2 <- ggplot(res_pl_PCL, aes(x=x,y=y)) +
   panel_border(color = "black", size = 0.4, linetype = 1, remove = FALSE)+
   background_grid() 
 
-p2<- ggdraw(p2) + 
-  draw_label("    Draft", color = "#C0A0A0", size = 50, angle = 45)
+# p2<- ggdraw(p2) + 
+#   draw_label("    Draft", color = "#C0A0A0", size = 50, angle = 45)
 
 ## DASS
 p3 <- ggplot(res_pl_DASS, aes(x=x,y=y)) +
@@ -260,8 +260,8 @@ p5 <- ggplot(res_pl_PHQ, aes(x=x,y=y)) +
   panel_border(color = "black", size = 0.4, linetype = 1, remove = FALSE)+
   background_grid() 
 
-p5<- ggdraw(p5) + 
-  draw_label("    Draft", color = "#C0A0A0", size = 50, angle = 45)
+# p5<- ggdraw(p5) + 
+#   draw_label("    Draft", color = "#C0A0A0", size = 50, angle = 45)
 
 ## GAD
 # p6 <- ggplot(res_pl_MBI, aes(x=x,y=y)) +
@@ -285,8 +285,8 @@ p5<- ggdraw(p5) +
 ###### 4. FIGURE 1 FULL #########################################################
 pdf("Figure_1_FULL.pdf", width=8, height=12)
 plot_grid(
-  q1, q2, q3, q4, q5, q6,
-  p1, p2, p3, p4, p5, p6,
+  q1, q2, q3, q4, q5, #q6,
+  p1, p2, p3, p4, p5, #p6,
   labels=c("A", "", "", "", "", "",
            "B", "", "", "", "", ""),
   ncol = 3, nrow = 4)
@@ -294,46 +294,46 @@ dev.off()
 
 
 ###### 5. Figure X #########################################################
-pdf("Figure_MBI_full.pdf", width=8, height=4)
-ggplot(data2_counted, aes(x=as.factor(1:nrow(data2_counted)),y=freq)) +
-  geom_bar(stat = "identity",fill = "grey26") +
-  scale_y_continuous(expand = expansion(mult = c(0, 0.05))) +
-  xlab("Phenotypes") + 
-  ylab("Freq") +
-  ggtitle("MBI")+
-  theme_minimal_hgrid() +
-  panel_border(color = "black", size = 0.4, linetype = 1, remove = FALSE) +
-  theme(
-    axis.text.x = element_blank(),
-    axis.ticks = element_blank())
-dev.off()
+# pdf("Figure_MBI_full.pdf", width=8, height=4)
+# ggplot(data2_counted, aes(x=as.factor(1:nrow(data2_counted)),y=freq)) +
+#   geom_bar(stat = "identity",fill = "grey26") +
+#   scale_y_continuous(expand = expansion(mult = c(0, 0.05))) +
+#   xlab("Phenotypes") + 
+#   ylab("Freq") +
+#   ggtitle("MBI")+
+#   theme_minimal_hgrid() +
+#   panel_border(color = "black", size = 0.4, linetype = 1, remove = FALSE) +
+#   theme(
+#     axis.text.x = element_blank(),
+#     axis.ticks = element_blank())
+# dev.off()
 
 
 
 
 ######  6. FIGURE X Zoom ####################################################
-data2_counted <- read_delim("Raw Data/freq_count_MBI.csv", 
-                             ";", escape_double = FALSE, trim_ws = TRUE)
-
-data2_counted <- data2_counted %>% 
-  select(freq)
-
-f1 <- ggplot(data2_counted, aes(x=as.numeric(1:nrow(data2_counted)),y=freq)) +
-  geom_bar(stat = "identity",fill = "grey26") +
-  scale_y_continuous(expand = expansion(mult = c(0, 0.05))) +
-  xlab("Number of phenotypes") + 
-  ylab("Freq") +
-  ggtitle("MBI")+
-  theme_cassic() +
-  panel_border(color = "black", size = 0.4, linetype = 1, remove = FALSE) +
-  theme(
-    axis.text.x = element_blank(),
-    axis.ticks = element_blank())
-
-
-# Choose which items to display
-f1 + 
-  facet_zoom(xlim = c(0, 100))
+# data2_counted <- read_delim("Raw Data/freq_count_MBI.csv", 
+#                              ";", escape_double = FALSE, trim_ws = TRUE)
+# 
+# data2_counted <- data2_counted %>% 
+#   select(freq)
+# 
+# f1 <- ggplot(data2_counted, aes(x=as.numeric(1:nrow(data2_counted)),y=freq)) +
+#   geom_bar(stat = "identity",fill = "grey26") +
+#   scale_y_continuous(expand = expansion(mult = c(0, 0.05))) +
+#   xlab("Number of phenotypes") + 
+#   ylab("Freq") +
+#   ggtitle("MBI")+
+#   theme_cassic() +
+#   panel_border(color = "black", size = 0.4, linetype = 1, remove = FALSE) +
+#   theme(
+#     axis.text.x = element_blank(),
+#     axis.ticks = element_blank())
+# 
+# 
+# # Choose which items to display
+# f1 + 
+#   facet_zoom(xlim = c(0, 100))
 
 
 ######  7. Session info #########################################################

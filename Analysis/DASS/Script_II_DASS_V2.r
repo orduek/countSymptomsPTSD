@@ -47,13 +47,13 @@ if(!require("poweRlaw")) install.packages("poweRlaw")
 ###### 2. Import and prepare data ############################################
 ## Prepare
 # Load datax & data2 created in script one
-data1_binarized<- read_delim("Generated Data/binarized.csv", 
+data1_binarized<- read_delim("Generated_Data/DASS_binarized.csv", 
                              ";", escape_double = FALSE, trim_ws = TRUE)
 
-data2_counted<- read_delim("Generated Data/freq_count.csv", 
+data2_counted<- read_delim("Generated_Data/DASS_freq_count.csv", 
                            ";", escape_double = FALSE, trim_ws = TRUE)
 
-datax<- read_delim("Generated Data/Matched_freq_count.csv", 
+datax<- read_delim("Generated_Data/DASS_Matched_freq_count.csv", 
                    ";", escape_double = FALSE, trim_ws = TRUE)
 
 ###### 3. Descriptive #######################################################
@@ -94,10 +94,10 @@ hist(datax$freq) # plot
 #data1_binarized_selected <- data1_binarized %>%   #Needed to select, because dataframe is too large for my memory
 # sample_n(1000)
 
-#data_jacc_dist <- dist(data1_binarized, method = "binary")
+data_jacc_dist <- dist(data1_binarized, method = "binary")
 data_jacc_index <- 1-data_jacc_dist
 
-summary(data_jacc_index)
+summary(data_jacc_index) # 
 median(data_jacc_index)
 hist(data_jacc_index)
 

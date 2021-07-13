@@ -106,22 +106,26 @@ hist(data1$total)
 ######  4.1 Binarizing ########################################################
 ## set cut-off
 ## We do not binarize PHQ data
-#cut_off <- 2 #will be used with <= // Specify for individual analysis
+cut_off <- 1 #will be used with <= // Specify for individual analysis
 
 ## Binarize
-# data1_binarized <- data1
-# for (i in 1:(ncol(data1)-1)){
-#   orig <- paste("q", i, sep = "")
-#   bin <- paste("Q", i, sep = "")
-#   data1_binarized[orig] <- dplyr::case_when(data1_binarized[bin]<= cut_off ~ 0, data1_binarized[bin]>cut_off ~ 1)  #0 = "Symptom absent", 1 = "Symptom present"
-#   
-# }
+data1_binarized <- data1
+for (i in 1:(ncol(data1)-1)){
+  orig <- paste("q", i, sep = "")
+  bin <- paste("Q", i, sep = "")
+  data1_binarized[orig] <- dplyr::case_when(data1_binarized[bin]<= cut_off ~ 0, data1_binarized[bin]>cut_off ~ 1)  #0 = "Symptom absent", 1 = "Symptom present"
+
+}
 
 # Create new data frame
-data2 <- data1[,1:9] # remove total scor
+data2 <- data1_binarized %>% 
+  select(total:ncol(data1_binarized)) %>% 
+  select(-total) %>% 
+  tibble()
+
 
 ## Count frequency of profiles
-data2_counted <- plyr::count(data2[, ]) # 39,341
+data2_counted <- plyr::count(data2[, ]) # 510
 
 # Create sum score of endorsed symptoms
 data2_counted <- data2_counted %>% 
@@ -130,10 +134,10 @@ data2_counted <- data2_counted %>%
 
 ######  4.2 Create datax ########################################################
 # Create full dataset
-datax <- dplyr::full_join(data1, data2_counted)
+datax <- dplyr::left_join(data1_binarized, data2_counted)
 
 # Save for further analysis
-write_csv2(data1, "Analysis/PHQ9/Generated Data/nonbinarized.csv")
+write_csv2(data1, "Analysis/PHQ9/Generated Data/binarized.csv")
 write_csv2(data2_counted, "Analysis/PHQ9/Generated Data/freq_count.csv")
 write_csv2(datax, "Analysis/PHQ9/Generated Data/Matched_freq_count.csv")
 

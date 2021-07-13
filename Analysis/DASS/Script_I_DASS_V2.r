@@ -48,7 +48,7 @@ if(!require("psych")) install.packages("psych")
 ###### 2. Import and prepare data ############################################
 #### Import
 #### Import
-# data <- read_delim("Raw Data/DASS_data_21.02.19/data.csv", "\t", escape_double = FALSE, trim_ws = TRUE)
+data <- read_delim("~/Documents/DASS_data_21.02.19/data.csv", "\t", escape_double = FALSE, trim_ws = TRUE)
 
 ###### 2.1 Select variables for methods and materials // DATA0
 data0 <- data %>% 
@@ -134,9 +134,9 @@ data2_counted <- data2_counted %>%
 datax <- dplyr::left_join(data1_binarized, data2_counted)
 
 # Save for further analysis
-write_csv2(data1_binarized, "Generated Data/binarized.csv")
-write_csv2(data2_counted, "Generated Data/freq_count.csv")
-write_csv2(datax, "Generated Data/Matched_freq_count.csv")
+write_csv2(data1_binarized, "Generated_Data/DASS_binarized.csv")
+write_csv2(data2_counted, "Generated_Data/DASS_freq_count.csv")
+write_csv2(datax, "Generated_Data/DASS_Matched_freq_count.csv")
 
 
 ######  5. Session info #########################################################

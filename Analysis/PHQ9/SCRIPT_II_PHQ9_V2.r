@@ -49,10 +49,10 @@ if(!require("poweRlaw")) install.packages("poweRlaw")
 data1_Nonbinarized<- read_delim("Analysis/PHQ9/Generated Data/nonbinarized.csv", 
                              ";", escape_double = FALSE, trim_ws = TRUE)
 
-data2_counted<- read_delim("Analysis/PHQ9/Generated Data/freq_count.csv", 
+data2_counted<- read_delim("Analysis/PHQ9/Generated Data/freq_count_nonB.csv", 
                            ";", escape_double = FALSE, trim_ws = TRUE)
 
-datax<- read_delim("Analysis/PHQ9/Generated Data/Matched_freq_count.csv", 
+datax<- read_delim("Analysis/PHQ9/Generated Data/Matched_freq_count_nonB.csv", 
                    ";", escape_double = FALSE, trim_ws = TRUE)
 
 ###### 3. Descriptive #######################################################
@@ -90,10 +90,10 @@ summary(datax$freq) # Median = 12
 hist(datax$freq) # plot
 
 ######  4.2 Jaccard-Index  ###################################################
-#data_jacc_dist <- dist(data1_binarized, method = "binary")
-#data_jacc_index <- 1-data_jacc_dist
+data_jacc_dist <- dist(data1_binarized, method = "binary")
+data_jacc_index <- 1-data_jacc_dist
 
-#summary(data_jacc_index)
+summary(data_jacc_index)
 #hist(data_jacc_index)
 
 ######  4.3 Plot the phenotypes distribution #################################

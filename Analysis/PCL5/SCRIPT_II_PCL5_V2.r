@@ -154,8 +154,8 @@ lines(m_ln_EQ, col = 4,lty = 2, lwd = 2)
 dev.off()
 
 # Formally assess
-compare_distributions(m_pl, m_ln_EQ)$p_two_sided # p < 0.95 -> one of the two has better fit
-compare_distributions(m_pl, m_ln_EQ)$p_one_sided #   p < 0.52 -> m_ln_EQ  better fit
+compare_distributions(m_pl, m_ln_EQ)$p_two_sided # p < 0.954 -> one of the two has better fit
+compare_distributions(m_pl, m_ln_EQ)$p_one_sided #   p < 0.522 -> m_ln_EQ  better fit
 compare_distributions(m_ln_EQ, m_pl)$p_one_sided #   p < 0.47 -> m_pl better fit
 
 

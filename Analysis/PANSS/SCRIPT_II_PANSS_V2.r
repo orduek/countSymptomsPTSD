@@ -131,8 +131,8 @@ m_pl$pars # 2.07
 
 ## Bootstrap parameters
 ## Test whether power law is possible
- bs_p = bootstrap_p(m_pl, no_of_sims = 5000, threads = 10, seed = 241)
-bs_p$p # 0.22
+bs_p = bootstrap_p(m_pl, no_of_sims = 5000, threads = 10, seed = 241)
+bs_p$p # 0.222
 
 pdf("PL_parameters_boot_PANSS.pdf", width=8, height=8)
 plot(bs_p)
@@ -154,8 +154,8 @@ lines(m_ln_EQ, col = 4,lty = 2, lwd = 2)
 dev.off()
 
 # Formally assess
-compare_distributions(m_pl, m_ln_EQ)$p_two_sided # p < 0.75 -> one of the two has better fit
-compare_distributions(m_pl, m_ln_EQ)$p_one_sided #   p < 0.37 -> m_ln_EQ  better fit
+compare_distributions(m_pl, m_ln_EQ)$p_two_sided # p < 0.752 -> one of the two has better fit
+compare_distributions(m_pl, m_ln_EQ)$p_one_sided #   p < 0.376 -> m_ln_EQ  better fit
 compare_distributions(m_ln_EQ, m_pl)$p_one_sided #   p < 0.62 -> m_pl better fit
 
 
