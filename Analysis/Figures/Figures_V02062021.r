@@ -273,7 +273,7 @@ p5 <- ggplot(res_pl_PHQ, aes(x=x,y=y)) +
 
 ###### 4. FIGURE 1 FULL #########################################################
 
-pdf("Figure_1.pdf", width=7.25, height=12) #Width given by Science requirements
+pdf("Figure_1.pdf", width=7.25, height=7.25) #Width given by Science requirements
 cowplot::plot_grid(
   q1, p1, q2, p2, q3, p3, q4, p4, q5, p5,
   labels=c("A", "B"),rel_widths = c(1, 2), 
